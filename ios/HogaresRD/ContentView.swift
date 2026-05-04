@@ -47,6 +47,33 @@ extension Color {
             ? UIColor(red: 0.36, green: 0.80, blue: 0.80, alpha: 1)
             : UIColor(red: 0.18, green: 0.60, blue: 0.60, alpha: 1)
     })
+
+    // ── Editorial palette (Profile redesign) ──
+    // Imported from the iOS profile design (ios-profile.jsx). Same warm
+    // cream + terracotta accents as the web's editorial home/dashboard.
+    // All four read against light backgrounds; on dark mode they tilt
+    // toward the same hue with higher luminance so the cream doesn't
+    // wash out the foreground.
+    static let rdCream = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1)   // deep ink
+            : UIColor(red: 0.984, green: 0.965, blue: 0.933, alpha: 1) // #FBF6EE
+    })
+    static let rdCreamDeep = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 1)
+            : UIColor(red: 0.957, green: 0.945, blue: 0.918, alpha: 1) // #F4F1EA
+    })
+    static let rdAccent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.92, green: 0.45, blue: 0.32, alpha: 1)
+            : UIColor(red: 0.710, green: 0.298, blue: 0.188, alpha: 1) // #B54C30 terracotta
+    })
+    static let rdGold = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.95, green: 0.78, blue: 0.40, alpha: 1)
+            : UIColor(red: 0.831, green: 0.651, blue: 0.290, alpha: 1) // #D4A64A
+    })
 }
 
 // MARK: - Lazy Tab Helper
@@ -648,354 +675,775 @@ struct TasksTabView: View {
     }
 }
 
-// MARK: - Profile Tab (replaces old Alertas + ProfileMenuView)
+// MARK: - Profile Tab — editorial redesign
+//
+// Mirrors the "ios-profile" design from claude.ai/design (cream
+// editorial palette, floating-avatar hero, 3 KPI tiles for
+// rating / ranking / cierres, then rounded-card section list).
+// All existing menu items are preserved — only the visual shell
+// and grouping changed.
 
 struct ProfileTabView: View {
     @EnvironmentObject var api:   APIService
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @State private var showPost = false
+    @State private var showSubscription = false
+
+    // Hero KPIs — populated async on appear. Nil = "—" placeholder.
+    @State private var ratingAvg:  Double? = nil
+    @State private var totalSales: Int?    = nil
 
     var body: some View {
         NavigationStack {
-            List {
-                // ── Profile Header ──
-                Section {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
                     if let user = api.currentUser {
-                        loggedInHeader(user)
+                        ProfileHeroCard(
+                            user: user,
+                            rating: ratingAvg,
+                            sales: totalSales
+                        )
+                        .environmentObject(api)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
+
+                        loggedInSections(user)
+                            .padding(.horizontal, 20)
                     } else {
-                        guestHeader
+                        guestHero
+                            .padding(.horizontal, 20)
+                            .padding(.top, 18)
+                        ProfileSectionCard(title: "Soporte") {
+                            supportRows
+                        }
+                        .padding(.horizontal, 20)
                     }
                 }
-
-                if let user = api.currentUser {
-                    // ── Account & Settings ──
-                    Section {
+                .padding(.bottom, 96)   // breathing room above the floating tab bar
+            }
+            .background(profileBackdrop)
+            .navigationTitle("Mi Perfil")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if api.currentUser != nil {
+                    ToolbarItem(placement: .primaryAction) {
                         NavigationLink {
-                            ProfileView()
+                            NotificationsView().environmentObject(api)
                         } label: {
-                            Label("Cuenta y seguridad", systemImage: "person.fill")
-                        }
-                        NavigationLink {
-                            NotificationSettingsView()
-                        } label: {
-                            Label("Notificaciones", systemImage: "bell.fill")
-                        }
-                        NavigationLink {
-                            AppSettingsView()
-                        } label: {
-                            Label("Apariencia", systemImage: "gearshape.fill")
+                            Image(systemName: "bell")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary)
                         }
                     }
-
-                    // ── Client: Saved Homes + Saved Searches ──
-                    if !user.isAgency {
-                        Section {
-                            NavigationLink {
-                                SavedListingsView()
-                            } label: {
-                                HStack {
-                                    Label("Propiedades guardadas", systemImage: "heart.fill")
-                                    Spacer()
-                                    if !saved.savedIDs.isEmpty {
-                                        Text("\(saved.savedIDs.count)")
-                                            .font(.caption2).bold()
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 7).padding(.vertical, 3)
-                                            .background(Color.rdRed)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                            }
-                            NavigationLink {
-                                SavedSearchesView().environmentObject(api)
-                            } label: {
-                                Label("Búsquedas guardadas", systemImage: "bell.badge.fill")
-                            }
-                        }
-                    }
-
-                    // ── Role-specific tools ──
-                    if user.isAgency {
-                        agentToolsSection(user)
-                        if user.isInmobiliaria || user.canViewTeam {
-                            teamManagementSection
-                        }
-                    } else {
-                        clientToolsSection
-                    }
-
-                    // ── Support ──
-                    supportSection
-
-                    // ── Logout ──
-                    Section {
-                        Button(role: .destructive) {
-                            api.logout()
-                        } label: {
-                            Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
-                                .foregroundStyle(Color.rdRed)
-                        }
-                    }
-                } else {
-                    // ── Guest Support ──
-                    supportSection
                 }
             }
-            .navigationTitle("Perfil")
             .sheet(item: $authSheet) { mode in
-                AuthView(initialMode: mode)
-                    .environmentObject(api)
-                    .id(mode)
+                AuthView(initialMode: mode).environmentObject(api).id(mode)
             }
             .sheet(isPresented: $showPost) {
                 SubmitListingView().environmentObject(api)
             }
+            .sheet(isPresented: $showSubscription) {
+                PlansView().environmentObject(api)
+            }
+            .task { await loadStats() }
+            .refreshable { await loadStats() }
         }
     }
 
-    // MARK: - Headers
+    // ── Backdrop ────────────────────────────────────────────────
+    // Soft warm cream gradient with a subtle gold + terracotta wash
+    // at the top — matches the design's "ellipse 80% 30% at 50% 0%"
+    // radial accents.
+    private var profileBackdrop: some View {
+        ZStack {
+            Color.rdCream.ignoresSafeArea()
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [
+                        Color.rdGold.opacity(0.18),
+                        Color.rdAccent.opacity(0.10),
+                        Color.clear,
+                    ],
+                    startPoint: .top,
+                    endPoint:   .bottom
+                )
+                .frame(height: 220)
+                .blur(radius: 60)
+                Spacer()
+            }
+            .ignoresSafeArea()
+        }
+    }
 
-    private func loggedInHeader(_ user: User) -> some View {
-        HStack(spacing: 14) {
-            AvatarView(user: user, size: 56, editable: true, color: avatarColor(user))
-                .environmentObject(api)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(user.name)
-                    .font(.headline)
-                Text(user.email)
-                    .font(.caption)
+    // ── Logged-in sections ──────────────────────────────────────
+    @ViewBuilder
+    private func loggedInSections(_ user: User) -> some View {
+        // General — account + notifications + appearance
+        ProfileSectionCard(title: "General") {
+            ProfileNavRow(
+                icon: "person.text.rectangle.fill",
+                label: "Cuenta y seguridad",
+                sub: "Datos personales, contraseña, 2FA"
+            ) { ProfileView() }
+            Divider().padding(.leading, 64)
+            ProfileNavRow(
+                icon: "bell.fill",
+                label: "Notificaciones",
+                sub: "Push, email y preferencias"
+            ) { NotificationSettingsView() }
+            Divider().padding(.leading, 64)
+            ProfileNavRow(
+                icon: "gearshape.fill",
+                label: "Apariencia",
+                sub: "Tema claro, oscuro o sistema"
+            ) { AppSettingsView() }
+            Divider().padding(.leading, 64)
+            ProfileActionRow(
+                icon: "crown.fill",
+                iconAccent: Color.rdGold,
+                label: "Suscripción",
+                sub: subscriptionRowSub(user),
+                action: { showSubscription = true }
+            )
+        }
+
+        // Client-only: saved listings + saved searches
+        if !user.isAgency {
+            ProfileSectionCard(title: "Mi actividad") {
+                ProfileNavRow(
+                    icon: "heart.fill",
+                    iconAccent: Color.rdRed,
+                    label: "Propiedades guardadas",
+                    sub: saved.savedIDs.isEmpty ? "Aún sin favoritos"
+                        : "\(saved.savedIDs.count) guardada\(saved.savedIDs.count == 1 ? "" : "s")"
+                ) { SavedListingsView() }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "bell.badge.fill",
+                    label: "Búsquedas guardadas",
+                    sub: "Recibe alertas de nuevas propiedades"
+                ) { SavedSearchesView().environmentObject(api) }
+            }
+
+            ProfileSectionCard(title: "Herramientas") {
+                ProfileNavRow(
+                    icon: "calendar.badge.clock",
+                    label: "Mis visitas",
+                    sub: nil
+                ) { MyToursView().environmentObject(api) }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "doc.text.fill",
+                    label: "Mis aplicaciones",
+                    sub: nil
+                ) { ApplicationsView() }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "brain.head.profile.fill",
+                    iconAccent: Color.rdAccent,
+                    label: "Asistente IA",
+                    sub: nil
+                ) { ChatIAView().environmentObject(api) }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "link",
+                    label: "Conectores",
+                    sub: nil
+                ) { ConnectorsView() }
+            }
+        }
+
+        // Agency / inmobiliaria tools
+        if user.isAgency {
+            ProfileSectionCard(title: "Herramientas de Agente") {
+                ProfileNavRow(
+                    icon: "chart.bar.fill",
+                    label: "Dashboard",
+                    sub: "Vista general de tu actividad"
+                ) {
+                    // api is already in the environment from the parent
+                    // NavigationStack — child views inherit via the SwiftUI
+                    // chain, no need for explicit .environmentObject here.
+                    if user.isTeamLead || user.effectiveAccessLevel >= 2 {
+                        InmobiliariaDashboardView()
+                    } else if user.isSecretary {
+                        SecretaryDashboardView()
+                    } else {
+                        BrokerDashboardView()
+                    }
+                }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "brain.head.profile.fill",
+                    iconAccent: Color.rdAccent,
+                    label: "Chat IA",
+                    sub: nil
+                ) { ChatIAView().environmentObject(api) }
+                Divider().padding(.leading, 64)
+                ProfileActionRow(
+                    icon: "plus.circle.fill",
+                    iconAccent: Color.rdAccent,
+                    label: "Publicar propiedad",
+                    sub: nil,
+                    action: { showPost = true }
+                )
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "briefcase.fill",
+                    iconAccent: Color.rdTeal,
+                    label: "Mi portafolio",
+                    sub: nil
+                ) { AgencyDashboardView().environmentObject(api) }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "doc.text.fill",
+                    label: "Aplicaciones recibidas",
+                    sub: nil
+                ) { ApplicationsView() }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "calendar.badge.clock",
+                    label: "Visitas agendadas",
+                    sub: nil
+                ) { BrokerToursView().environmentObject(api) }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "megaphone.fill",
+                    iconAccent: Color.rdAccent,
+                    label: "Publicidad (Meta Ads)",
+                    sub: nil
+                ) { AdCampaignsView().environmentObject(api) }
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "clock.badge.checkmark",
+                    label: "Disponibilidad",
+                    sub: nil
+                ) { BrokerAvailabilityView().environmentObject(api) }
+            }
+
+            // Team management (inmobiliaria/constructora + access >= 2)
+            if user.canViewTeam {
+                ProfileSectionCard(title: "Gestión de Equipo") {
+                    ProfileNavRow(
+                        icon: "person.2.fill",
+                        label: "Mis agentes",
+                        sub: nil
+                    ) { InmobiliariaTeamListView().environmentObject(api) }
+                    Divider().padding(.leading, 64)
+                    ProfileNavRow(
+                        icon: "chart.line.uptrend.xyaxis",
+                        label: "Rendimiento del equipo",
+                        sub: nil
+                    ) { InmobiliariaPerformanceListView().environmentObject(api) }
+                    if user.canManageTeam {
+                        Divider().padding(.leading, 64)
+                        ProfileNavRow(
+                            icon: "person.badge.plus",
+                            label: "Solicitudes de afiliación",
+                            sub: nil
+                        ) { InmobiliariaRequestsListView().environmentObject(api) }
+                    }
+                }
+            }
+        }
+
+        // Soporte (links out)
+        ProfileSectionCard(title: "Soporte") {
+            supportRows
+        }
+
+        // Logout (destructive)
+        ProfileSectionCard(title: nil) {
+            Button(role: .destructive) {
+                api.logout()
+            } label: {
+                ProfileRowLabel(
+                    icon: "rectangle.portrait.and.arrow.right",
+                    iconAccent: Color.rdAccent,
+                    label: "Cerrar sesión",
+                    sub: nil,
+                    danger: true,
+                    showChevron: false
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // ── Reusable bits ───────────────────────────────────────────
+    @ViewBuilder
+    private var supportRows: some View {
+        ProfileExternalRow(
+            icon: "questionmark.circle.fill",
+            label: "Centro de ayuda",
+            url:   URL(string: "https://hogaresrd.com/contacto")!
+        )
+        Divider().padding(.leading, 64)
+        ProfileExternalRow(
+            icon: "doc.text.fill",
+            label: "Términos de uso",
+            url:   URL(string: "https://hogaresrd.com/terminos")!
+        )
+        Divider().padding(.leading, 64)
+        ProfileExternalRow(
+            icon: "lock.shield.fill",
+            label: "Privacidad",
+            url:   URL(string: "https://hogaresrd.com/privacidad")!
+        )
+    }
+
+    private var guestHero: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Color.rdAccent.opacity(0.10))
+                    .frame(width: 116, height: 116)
+                Image(systemName: "person.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color.rdAccent)
+            }
+
+            VStack(spacing: 6) {
+                Text("Bienvenido a HogaresRD")
+                    .font(.system(size: 22, weight: .semibold, design: .serif))
+                Text("Inicia sesión para guardar propiedades,\nrecibir actualizaciones y más.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                roleBadge(user)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var guestHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 56, height: 56)
-                    Image(systemName: "person.circle")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.rdBlue)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Bienvenido")
-                        .font(.headline)
-                    Text("Inicia sesión para acceder a todas las funciones")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                    .multilineTextAlignment(.center)
             }
 
-            HStack(spacing: 10) {
+            VStack(spacing: 10) {
                 Button {
                     authSheet = .welcome
                 } label: {
                     Text("Iniciar sesión")
-                        .font(.caption).bold()
+                        .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.rdBlue)
+                        .padding(.vertical, 14)
+                        .background(Color.rdAccent)
                         .foregroundStyle(.white)
-                        .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 Button {
                     authSheet = .pickRole
                 } label: {
-                    Text("Crear cuenta")
-                        .font(.caption).bold()
+                    Text("Crear cuenta gratis")
+                        .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.rdRed.opacity(0.1))
-                        .foregroundStyle(Color.rdRed)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.rdRed.opacity(0.3), lineWidth: 1))
+                        .padding(.vertical, 14)
+                        .background(Color.rdAccent.opacity(0.10))
+                        .foregroundStyle(Color.rdAccent)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.rdAccent.opacity(0.25), lineWidth: 1.2)
+                        )
                 }
             }
+            .padding(.top, 4)
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
     }
 
-    // MARK: - Role Badge
+    // ── Helpers ─────────────────────────────────────────────────
+
+    private func subscriptionRowSub(_ user: User) -> String {
+        if !user.isAgency { return "Plan Cliente · Gratis" }
+        switch user.role {
+        case "broker", "agency":   return "Plan Broker"
+        case "inmobiliaria":       return "Plan Inmobiliaria"
+        case "constructora":       return "Plan Constructora"
+        case "secretary":          return "Asociado a tu inmobiliaria"
+        default:                   return "Activo"
+        }
+    }
+
+    private func loadStats() async {
+        guard let user = api.currentUser, user.isAgency else {
+            ratingAvg  = nil
+            totalSales = nil
+            return
+        }
+        async let salesTask: Int? = {
+            (try? await api.getDashboardSales())?.totalSales
+        }()
+        async let ratingTask: Double? = await fetchMyRating(user: user)
+        let (s, r) = await (salesTask, ratingTask)
+        await MainActor.run {
+            self.totalSales = s
+            self.ratingAvg  = r
+        }
+    }
+
+    /// Pull the aggregate rating from the public reviews endpoint for
+    /// the user's own inmobiliaria. Brokers attached to an inmobiliaria
+    /// inherit their team's score; team leads see their own. Returns
+    /// nil when the endpoint isn't applicable (no reviews, 404, etc.).
+    private func fetchMyRating(user: User) async -> Double? {
+        let inmId: String? = {
+            if user.isInmobiliaria { return user.id }
+            // Brokers/agency under an inmobiliaria — use the parent.
+            // user model doesn't carry inmobiliaria_id; fall back to nil.
+            return nil
+        }()
+        guard let id = inmId else { return nil }
+        guard let url = URL(string: "\(apiBase)/api/inmobiliaria/\(id)/reviews"),
+              let req = try? api.authedRequest(url) else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(for: req) else { return nil }
+        struct Wrap: Decodable { let average: Double? }
+        return (try? JSONDecoder().decode(Wrap.self, from: data))?.average
+    }
+}
+
+// MARK: - Profile Hero Card
+//
+// Floating-avatar header card. Layout: avatar overlaps the top of a
+// white rounded card; below the avatar sits the name (serif),
+// optional subtitle (agency / role), and a 3-tile KPI grid for
+// rating / ranking / cierres. KPI tiles are hidden for non-agency
+// users — those metrics aren't meaningful for plain clients.
+
+private struct ProfileHeroCard: View {
+    let user: User
+    let rating: Double?
+    let sales:  Int?
+
+    @EnvironmentObject var api: APIService
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            // Card body
+            VStack(spacing: 18) {
+                Spacer().frame(height: 58)   // room for the floating avatar
+
+                // Name (serif italic last name) + subtitle
+                VStack(spacing: 6) {
+                    nameView
+                        .multilineTextAlignment(.center)
+                    subtitleView
+                }
+                .frame(maxWidth: .infinity)
+
+                if user.isAgency {
+                    HStack(spacing: 10) {
+                        kpiTile(
+                            label: "Calificación",
+                            value: rating.map { String(format: "%.1f", $0) } ?? "—",
+                            icon: "star.fill",
+                            tint: Color.rdGold
+                        )
+                        kpiTile(
+                            label: "Ranking",
+                            value: rankingLabel(),
+                            icon: "trophy.fill",
+                            tint: Color.rdAccent
+                        )
+                        kpiTile(
+                            label: "Cierres",
+                            value: sales.map(String.init) ?? "—",
+                            icon: "briefcase.fill",
+                            tint: Color.rdTeal
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.bottom, 18)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color(.systemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.04), radius: 12, y: 4)
+            .padding(.top, 58)   // pushes the card down so the avatar floats above
+
+            // Floating avatar — absolute, centered horizontally
+            avatar
+        }
+    }
+
+    private var nameView: Text {
+        let parts = user.name.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        let first = String(parts.first ?? "")
+        let last  = parts.count > 1 ? String(parts[1]) : ""
+
+        let firstText = Text(first)
+            .font(.system(size: 28, weight: .semibold, design: .serif))
+            .foregroundStyle(.primary)
+
+        if last.isEmpty { return firstText }
+        return firstText
+            + Text(" ")
+            + Text(last)
+                .font(.system(size: 28, weight: .semibold, design: .serif))
+                .italic()
+                .foregroundStyle(.secondary)
+    }
 
     @ViewBuilder
-    private func roleBadge(_ user: User) -> some View {
-        if user.isConstructora {
-            Label("Constructora", systemImage: "hammer.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
-        } else if user.isInmobiliaria {
-            Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
-        } else if user.isSecretary {
-            Label("Secretaria", systemImage: "person.text.rectangle.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color(red: 0.18, green: 0.55, blue: 0.34))
-        } else if user.isAgency {
-            Label("Agente / Broker", systemImage: "person.badge.key.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color.rdBlue)
+    private var subtitleView: some View {
+        if let agency = user.agencyName, !agency.isEmpty {
+            HStack(spacing: 5) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Text(agency)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         } else {
-            Label("Cliente", systemImage: "person.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color.rdGreen)
+            Text(roleLabel)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 
-    private func avatarColor(_ user: User) -> Color {
-        if user.isConstructora { return Color(red: 0.7, green: 0.35, blue: 0.04) }
-        if user.isInmobiliaria { return Color(red: 0.4, green: 0.1, blue: 0.6) }
-        if user.isAgency { return Color.rdBlue }
-        return Color.rdGreen
+    private var roleLabel: String {
+        if user.isConstructora  { return "Constructora" }
+        if user.isInmobiliaria  { return "Inmobiliaria" }
+        if user.isSecretary     { return "Secretaria" }
+        if user.isAgency        { return "Agente · Broker" }
+        return "Cliente"
     }
 
-    // MARK: - Agent Tools
-
-    private func agentToolsSection(_ user: User) -> some View {
-        Section("Herramientas de Agente") {
-            NavigationLink {
-                // Team leads (inmobiliaria + constructora) ALWAYS get the
-                // full team dashboard. Secretaries get the limited secretary
-                // dashboard. Everyone else (broker/agency) gets broker.
-                if user.isTeamLead || user.effectiveAccessLevel >= 2 {
-                    InmobiliariaDashboardView().environmentObject(api)
-                } else if user.isSecretary {
-                    SecretaryDashboardView().environmentObject(api)
-                } else {
-                    BrokerDashboardView().environmentObject(api)
-                }
-            } label: {
-                Label("Dashboard", systemImage: "chart.bar.fill")
-            }
-            NavigationLink {
-                ChatIAView().environmentObject(api)
-            } label: {
-                Label("Chat IA", systemImage: "brain.head.profile.fill")
-            }
-            Button {
-                showPost = true
-            } label: {
-                Label("Publicar propiedad", systemImage: "plus.circle.fill")
-                    .foregroundStyle(Color.rdRed)
-            }
-            NavigationLink {
-                AgencyDashboardView().environmentObject(api)
-            } label: {
-                Label("Mi portafolio", systemImage: "briefcase.fill")
-            }
-            NavigationLink {
-                ApplicationsView()
-            } label: {
-                Label("Aplicaciones recibidas", systemImage: "doc.text.fill")
-            }
-            NavigationLink {
-                BrokerToursView().environmentObject(api)
-            } label: {
-                Label("Visitas agendadas", systemImage: "calendar.badge.clock")
-            }
-            NavigationLink {
-                AdCampaignsView().environmentObject(api)
-            } label: {
-                Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
-            }
-            NavigationLink {
-                BrokerAvailabilityView().environmentObject(api)
-            } label: {
-                Label("Disponibilidad", systemImage: "clock.badge.checkmark")
-            }
+    private var avatar: some View {
+        ZStack {
+            Circle()
+                .fill(Color.rdCream)
+                .frame(width: 116, height: 116)
+                .shadow(color: Color.rdAccent.opacity(0.18), radius: 14, y: 4)
+            AvatarView(user: user, size: 108, editable: true, color: Color.rdAccent)
+                .environmentObject(api)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 2))
         }
     }
 
-    // MARK: - Team Management (Inmobiliaria only)
-
-    private var teamManagementSection: some View {
-        let level = api.currentUser?.effectiveAccessLevel ?? 1
-        return Section("Gestión de Equipo") {
-            if level >= 2 {
-                NavigationLink {
-                    InmobiliariaTeamListView().environmentObject(api)
-                } label: {
-                    Label("Mis agentes", systemImage: "person.2.fill")
-                }
-                NavigationLink {
-                    InmobiliariaPerformanceListView().environmentObject(api)
-                } label: {
-                    Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
-                }
-            }
-            if level >= 3 {
-                NavigationLink {
-                    InmobiliariaRequestsListView().environmentObject(api)
-                } label: {
-                    Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
-                }
+    private func kpiTile(label: String, value: String, icon: String, tint: Color) -> some View {
+        VStack(spacing: 6) {
+            Text(label)
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(.secondary)
+                .tracking(0.3)
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(tint)
+                Text(value)
+                    .font(.system(size: 14.5, weight: .bold))
+                    .foregroundStyle(.primary)
             }
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+        .padding(.horizontal, 6)
+        .background(Color.rdCreamDeep)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    // MARK: - Client Tools
+    /// Coarse ranking proxy. The server doesn't expose a percentile
+    /// metric yet, so we derive a label from the (rating, sales) pair
+    /// when available — better than a flat "—" for the common case
+    /// of an active agent. Rough buckets only; replace with a real
+    /// endpoint later.
+    private func rankingLabel() -> String {
+        guard let s = sales else { return "—" }
+        if s >= 25 { return "Top 5%" }
+        if s >= 15 { return "Top 10%" }
+        if s >= 8  { return "Top 25%" }
+        if s >= 3  { return "Top 50%" }
+        return "—"
+    }
+}
 
-    private var clientToolsSection: some View {
-        Section("Herramientas") {
-            NavigationLink {
-                MyToursView().environmentObject(api)
-            } label: {
-                Label("Mis visitas", systemImage: "calendar.badge.clock")
+// MARK: - Profile Section Card
+//
+// Wraps a stack of rows in a rounded card, with an optional uppercase
+// eyebrow above. Mirrors the design's section-list pattern.
+
+private struct ProfileSectionCard<Content: View>: View {
+    let title: String?
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let title {
+                Text(title.uppercased())
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .tracking(1.0)
+                    .padding(.horizontal, 4)
             }
-            NavigationLink {
-                ApplicationsView()
-            } label: {
-                Label("Mis aplicaciones", systemImage: "doc.text.fill")
+            VStack(spacing: 0) {
+                content
             }
-            NavigationLink {
-                ChatIAView().environmentObject(api)
-            } label: {
-                Label("Asistente IA", systemImage: "brain.head.profile.fill")
-            }
-            NavigationLink {
-                ConnectorsView()
-            } label: {
-                Label("Conectores", systemImage: "link")
-            }
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(.systemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(0.03), radius: 8, y: 2)
         }
     }
+}
 
-    // MARK: - Support
+// MARK: - Profile Row Label
+//
+// The shared visual for every row in a section card: 36×36 tinted
+// icon tile, label + optional subtitle, and an optional chevron.
+// Used as the `label:` for NavigationLink, Button, and Link.
 
-    private var supportSection: some View {
-        Section("Soporte") {
-            Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
-                HStack {
-                    Label("Ayuda", systemImage: "questionmark.circle.fill")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+private struct ProfileRowLabel: View {
+    let icon: String
+    var iconAccent: Color = .primary
+    let label: String
+    let sub: String?
+    var danger: Bool = false
+    var showChevron: Bool = true
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(danger ? Color.rdAccent.opacity(0.12) : Color.rdCreamDeep)
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(danger ? Color.rdAccent : iconAccent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(danger ? Color.rdAccent : .primary)
+                if let sub, !sub.isEmpty {
+                    Text(sub)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
-            Link(destination: URL(string: "https://hogaresrd.com/terminos")!) {
-                HStack {
-                    Label("Términos de uso", systemImage: "doc.text.fill")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            Link(destination: URL(string: "https://hogaresrd.com/privacidad")!) {
-                HStack {
-                    Label("Privacidad", systemImage: "lock.shield.fill")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+            Spacer(minLength: 8)
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tertiary)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Profile Nav / External Rows
+
+/// Either a NavigationLink (when `destination` is supplied) or a
+/// Button (when `action` is supplied). Picks one path so callers
+/// don't have to wrap NavigationLink boilerplate at every site.
+/// NavigationLink-style row: tapping pushes `destination`. The
+/// @ViewBuilder annotation on the initializer parameter is what lets
+/// the call site write `if/else` branches that resolve to
+/// `_ConditionalContent<…>` instead of bare expression statements
+/// (which produce "result is unused" warnings).
+private struct ProfileNavRow<Destination: View>: View {
+    let icon: String
+    var iconAccent: Color = .primary
+    let label: String
+    let sub: String?
+    @ViewBuilder let destination: () -> Destination
+
+    init(
+        icon: String,
+        iconAccent: Color = .primary,
+        label: String,
+        sub: String?,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) {
+        self.icon = icon
+        self.iconAccent = iconAccent
+        self.label = label
+        self.sub = sub
+        self.destination = destination
+    }
+
+    var body: some View {
+        NavigationLink {
+            destination()
+        } label: {
+            ProfileRowLabel(
+                icon: icon, iconAccent: iconAccent,
+                label: label, sub: sub
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Button-style row: tapping fires `action`. Separate type from
+/// ProfileNavRow so overload resolution at the call site is
+/// unambiguous (both share the icon/label/sub prefix).
+private struct ProfileActionRow: View {
+    let icon: String
+    var iconAccent: Color = .primary
+    let label: String
+    let sub: String?
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ProfileRowLabel(
+                icon: icon, iconAccent: iconAccent,
+                label: label, sub: sub
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ProfileExternalRow: View {
+    let icon: String
+    let label: String
+    let url:   URL
+
+    var body: some View {
+        Link(destination: url) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.rdCreamDeep)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.primary)
+                }
+                Text(label)
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
