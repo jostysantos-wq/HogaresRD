@@ -12,6 +12,7 @@ struct PlansView: View {
     @State private var purchasing: String?
     @State private var showSuccess = false
     @State private var showCancelFlow = false
+    @State private var showManageSubscriptions = false
 
     var body: some View {
         NavigationStack {
@@ -83,7 +84,9 @@ struct PlansView: View {
                         }
                     }
 
-                    // Restore purchases
+                    // Restore purchases — required by App Store Review
+                    // 3.1.1. Lets users on a new device or after reinstall
+                    // recover their previously-bought subscription.
                     Button {
                         Task { await store.restorePurchases() }
                     } label: {
@@ -92,6 +95,20 @@ struct PlansView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 8)
+
+                    // Manage subscription — opens the system sheet so the
+                    // user can change plan / cancel without leaving the
+                    // app. Required surface per 3.1.2(c).
+                    if store.hasActiveSubscription {
+                        Button {
+                            showManageSubscriptions = true
+                        } label: {
+                            Text("Gestionar suscripción")
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(Color.rdBlue)
+                        }
+                        .padding(.top, 4)
+                    }
 
                     // Legal text
                     VStack(spacing: 6) {
@@ -123,6 +140,7 @@ struct PlansView: View {
                 CancelSubscriptionView()
                     .environmentObject(api)
             }
+            .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }

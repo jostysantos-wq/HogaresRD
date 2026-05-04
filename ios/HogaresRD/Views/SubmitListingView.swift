@@ -22,7 +22,6 @@ struct UnitType: Identifiable {
 struct SubmitListingView: View {
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) var dismiss
-    @Environment(\.openURL) var openURL
 
     // Transaction type
     @State private var listingType = "venta"
@@ -119,6 +118,7 @@ struct SubmitListingView: View {
     // Paywall gating
     @State private var checkingSubscription = true
     @State private var paywallBlocked = false
+    @State private var showPlansSheet = false
 
     // Options
     private let listingTypes   = [("venta","En Venta"),("alquiler","En Alquiler"),("proyecto","Proyecto")]
@@ -255,19 +255,23 @@ struct SubmitListingView: View {
             Image(systemName: "lock.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(Color.rdBlue)
-            Text("Completa tu pago para publicar")
+            Text("Activa tu suscripción para publicar")
                 .font(.title2).bold()
                 .multilineTextAlignment(.center)
-            Text("Para publicar propiedades necesitas activar tu suscripción con un método de pago. Tu prueba de 14 días empieza al agregar la tarjeta y no se cobra nada hasta el día 15.")
+            Text("Para publicar propiedades necesitas un plan activo. Elige el que mejor se adapte a tu negocio — la suscripción se gestiona desde tu Apple ID.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
 
+            // App Store Review 3.1.1 / 3.1.3: gating an in-app feature
+            // must route through StoreKit, not an external web checkout.
+            // Presents PlansView (StoreKit 2 IAP) — same flow used from
+            // the broker dashboard's Suscripción menu item.
             Button {
-                if let url = URL(string: "\(apiBase)/subscribe") { openURL(url) }
+                showPlansSheet = true
             } label: {
-                Text("Activar mi suscripción")
+                Text("Ver planes")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -286,6 +290,13 @@ struct SubmitListingView: View {
             Spacer()
         }
         .padding()
+        .sheet(isPresented: $showPlansSheet, onDismiss: {
+            // Re-check after the user closes the plans sheet — if they
+            // bought, the paywall lifts on its own.
+            Task { await checkSubscription() }
+        }) {
+            PlansView().environmentObject(api)
+        }
     }
 
     // MARK: - Form
