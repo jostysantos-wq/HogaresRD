@@ -2040,6 +2040,45 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - User Blocks (App Store Review 1.2)
+    //
+    // Lets a user hide all UGC from another user — primarily messages.
+    // The block is symmetric server-side: when A blocks B, neither sees
+    // the other's conversations. State lives on the user record.
+
+    struct BlockedUser: Decodable, Identifiable {
+        let id: String
+        let name: String
+        let email: String?
+        let role: String?
+        let avatar: String?
+    }
+
+    func getBlockedUsers() async throws -> [BlockedUser] {
+        let req = try authedRequest(apiURL("/api/blocks"))
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar los bloqueos")
+        struct Wrapper: Decodable { let blocked: [BlockedUser] }
+        return (try? decoder.decode(Wrapper.self, from: data).blocked) ?? []
+    }
+
+    @discardableResult
+    func blockUser(id: String) async throws -> Bool {
+        let body = try JSONSerialization.data(withJSONObject: ["user_id": id])
+        let req = try authedRequest(apiURL("/api/blocks"), method: "POST", body: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo bloquear")
+        return true
+    }
+
+    @discardableResult
+    func unblockUser(id: String) async throws -> Bool {
+        let req = try authedRequest(apiURL("/api/blocks/\(id)"), method: "DELETE")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo desbloquear")
+        return true
+    }
+
     // MARK: - Inventory
 
     struct InventoryResponse: Decodable {

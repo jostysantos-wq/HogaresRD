@@ -131,6 +131,11 @@ struct ProfileView: View {
                 } label: {
                     Label("Privacidad y datos", systemImage: "hand.raised.fill")
                 }
+                NavigationLink {
+                    BlockedUsersView()
+                } label: {
+                    Label("Usuarios bloqueados", systemImage: "hand.raised.slash")
+                }
             }
 
             // Note: Favorites, Messages, Applications, Appearance, Support, and Logout
@@ -1611,5 +1616,109 @@ struct EditProfileView: View {
         } catch {
             errorMsg = (error as? LocalizedError)?.errorDescription ?? "No se pudo guardar."
         }
+    }
+}
+
+// MARK: - Blocked Users View
+//
+// App Store Review 1.2 requires apps with UGC/messaging to let users
+// block other users AND review/manage that list. The conversation
+// header surfaces the block action; this screen surfaces the list +
+// the unblock action so users can reverse the decision.
+
+struct BlockedUsersView: View {
+    @EnvironmentObject var api: APIService
+
+    @State private var blocked: [APIService.BlockedUser] = []
+    @State private var loading = true
+    @State private var errorMsg: String?
+
+    var body: some View {
+        Group {
+            if loading && blocked.isEmpty {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if blocked.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "hand.raised.slash")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.tertiary)
+                    Text("No has bloqueado a nadie.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("Puedes bloquear desde el menú \"⋯\" en cualquier conversación.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    Section {
+                        ForEach(blocked) { u in
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle().fill(Color(.tertiarySystemFill))
+                                        .frame(width: 38, height: 38)
+                                    Text(initials(u.name))
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.secondary)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(u.name)
+                                        .font(.subheadline.bold())
+                                    if let email = u.email, !email.isEmpty {
+                                        Text(email)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Button("Desbloquear") {
+                                    Task { await unblock(u) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .tint(.gray)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    } footer: {
+                        Text("Las conversaciones con personas bloqueadas se ocultan. Desbloquear las restablece — los mensajes anteriores volverán a aparecer.")
+                    }
+                }
+            }
+        }
+        .navigationTitle("Bloqueados")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .refreshable { await load() }
+        .alert("Error", isPresented: .constant(errorMsg != nil), actions: {
+            Button("OK") { errorMsg = nil }
+        }, message: { Text(errorMsg ?? "") })
+    }
+
+    private func load() async {
+        loading = true
+        defer { loading = false }
+        do {
+            blocked = try await api.getBlockedUsers()
+        } catch {
+            errorMsg = (error as? LocalizedError)?.errorDescription ?? "No se pudo cargar la lista."
+        }
+    }
+
+    private func unblock(_ u: APIService.BlockedUser) async {
+        do {
+            _ = try await api.unblockUser(id: u.id)
+            blocked.removeAll { $0.id == u.id }
+        } catch {
+            errorMsg = (error as? LocalizedError)?.errorDescription ?? "No se pudo desbloquear."
+        }
+    }
+
+    private func initials(_ name: String) -> String {
+        let parts = name.split(separator: " ").prefix(2)
+        return parts.compactMap { $0.first }.map(String.init).joined().uppercased()
     }
 }

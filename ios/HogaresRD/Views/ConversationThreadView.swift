@@ -19,6 +19,9 @@ struct ConversationThreadView: View {
     @State private var closeReasonInput: String = ""
     @State private var toggling:       Bool   = false
     @State private var toggleError:    String?
+    @State private var showBlockAlert: Bool   = false
+    @State private var blocking:       Bool   = false
+    @State private var blockError:     String?
     @State private var claiming:       Bool   = false
     @State private var claimed:        Bool   = false
     @State private var loadError:      String?
@@ -42,6 +45,24 @@ struct ConversationThreadView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private var myId: String { api.currentUser?.id ?? "" }
+
+    /// The other participant's ID (and display name) — present whenever
+    /// the conversation has both parties locked in. Used to gate the
+    /// "Bloquear usuario" menu item: a client can block the assigned
+    /// broker, and vice versa.
+    private var otherUserId: String? {
+        if conversation.clientId == myId { return conversation.brokerId }
+        if conversation.brokerId == myId { return conversation.clientId }
+        return nil
+    }
+    private var otherUserName: String {
+        if conversation.clientId == myId { return conversation.brokerName ?? "este agente" }
+        return conversation.clientName.isEmpty ? "este usuario" : conversation.clientName
+    }
+    private var canBlockOther: Bool {
+        guard let other = otherUserId, !other.isEmpty else { return false }
+        return other != myId
+    }
     private var myRole: String { api.currentUser?.role ?? "user" }
     private var isPro: Bool {
         ["agency", "broker", "inmobiliaria", "constructora"].contains(myRole)
@@ -158,6 +179,17 @@ struct ConversationThreadView: View {
         .alert("Error", isPresented: .constant(toggleError != nil), actions: {
             Button("OK") { toggleError = nil }
         }, message: { Text(toggleError ?? "") })
+        .alert("Bloquear \(otherUserName)", isPresented: $showBlockAlert) {
+            Button("Cancelar", role: .cancel) { }
+            Button("Bloquear", role: .destructive) {
+                Task { await blockOtherParty() }
+            }
+        } message: {
+            Text("Dejarás de ver esta conversación y \(otherUserName) no podrá enviarte mensajes. Puedes desbloquear desde tu perfil en cualquier momento.")
+        }
+        .alert("Error", isPresented: .constant(blockError != nil), actions: {
+            Button("OK") { blockError = nil }
+        }, message: { Text(blockError ?? "") })
         .task {
             await loadMessages()
             await markRead()
@@ -236,7 +268,7 @@ struct ConversationThreadView: View {
 
             Spacer(minLength: 0)
 
-            if canToggleClose || canTransfer || canShareApply || canRequestTransfer {
+            if canToggleClose || canTransfer || canShareApply || canRequestTransfer || canBlockOther {
                 Menu {
                     if canShareApply {
                         Button {
@@ -273,6 +305,14 @@ struct ConversationThreadView: View {
                             } label: {
                                 Label("Cerrar conversación", systemImage: "lock")
                             }
+                        }
+                    }
+                    if canBlockOther {
+                        Divider()
+                        Button(role: .destructive) {
+                            showBlockAlert = true
+                        } label: {
+                            Label("Bloquear \(otherUserName)", systemImage: "hand.raised.slash")
                         }
                     }
                 } label: {
@@ -726,6 +766,24 @@ struct ConversationThreadView: View {
         closedByName = conv.closedByName
         closedAt     = conv.closedAt
         closedReason = conv.closedReason
+    }
+
+    /// Block the other participant. The conversation list filters
+    /// blocked threads on the next refresh, so on success we just pop
+    /// back — the user lands on a list that no longer includes this
+    /// chat. Server enforces the block bidirectionally.
+    @MainActor
+    private func blockOtherParty() async {
+        guard let other = otherUserId else { return }
+        blocking = true
+        defer { blocking = false }
+        do {
+            _ = try await api.blockUser(id: other)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            dismiss()
+        } catch {
+            blockError = error.localizedDescription
+        }
     }
 
     private func toggleClose(reason: String = "") async {

@@ -476,6 +476,7 @@ app.use('/api/referrals',     require('./routes/referrals'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/auth').userAuth, requireActiveSubscription, require('./routes/conversations'));
+app.use('/api/blocks',        require('./routes/blocks'));
 app.use('/api/lead-queue', require('./routes/auth').userAuth, requireActiveSubscription, require('./routes/lead-queue').router);
 app.use('/api/contributions', require('./routes/auth').userAuth, require('./routes/contributions').router);
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));

@@ -303,6 +303,17 @@ router.get('/', requireLogin, (req, res) => {
   const wantArchived = req.query.archived === 'true';
   convs = convs.filter(c => wantArchived ? !!c.archived : !c.archived);
 
+  // App Store Review 1.2 — hide conversations involving any user the
+  // caller has blocked (or who has blocked the caller). Admins still
+  // see everything for moderation purposes.
+  if (user.role !== 'admin') {
+    convs = convs.filter(c => {
+      const otherId = c.clientId === user.sub ? c.brokerId : c.clientId;
+      if (!otherId) return true;
+      return !store.isBlockedEitherWay(user.sub, otherId);
+    });
+  }
+
   // Return without full message array for list view (just metadata)
   // Enrich with participant avatars for display in conversation list
   const list = convs.map(meta => {
@@ -428,6 +439,17 @@ router.get('/:id', requireLogin, async (req, res) => {
 
   if (!isClient && !isAssignedBroker && !isOrgUnclaimed && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
+  }
+
+  // App Store Review 1.2 — block-aware read access. If the caller is a
+  // direct participant and they (or the other party) have a block in
+  // place, surface a 404 so the conversation appears removed rather
+  // than just silenced.
+  if ((isClient || isAssignedBroker) && !isAdmin) {
+    const otherId = isClient ? conv.brokerId : conv.clientId;
+    if (otherId && store.isBlockedEitherWay(user.sub, otherId)) {
+      return res.status(404).json({ error: 'Conversación no encontrada.' });
+    }
   }
 
   // Unclaimed org conversations: ALL org agents (including the director) see
@@ -605,6 +627,17 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
       return res.status(403).json({ error: 'Debes reclamar esta conversacion antes de enviar mensajes.' });
     }
     return res.status(403).json({ error: 'Sin acceso.' });
+  }
+
+  // App Store Review 1.2 — refuse to deliver a message to a user who
+  // has been blocked (in either direction). Returning 403 instead of
+  // silently dropping so the sender's UI can react, but the error
+  // message stays generic to avoid leaking the block.
+  if (!isAdmin) {
+    const otherId = isClient ? conv.brokerId : conv.clientId;
+    if (otherId && store.isBlockedEitherWay(user.sub, otherId)) {
+      return res.status(403).json({ error: 'No puedes enviar mensajes en esta conversación.' });
+    }
   }
 
   // Subscription gate for the assigned broker: an agent whose

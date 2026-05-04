@@ -2116,11 +2116,60 @@ function deleteDeletionRequest(id) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// USER BLOCK LIST
+// ══════════════════════════════════════════════════════════════════════════
+// Lives inside user._extra.blocked_user_ids (string[]) so we don't need a
+// schema migration. App Store Review 1.2 requires a way to block other
+// users in any UGC/messaging surface; the conversations + reviews
+// endpoints filter by these lists.
+
+function getBlockedUserIds(userId) {
+  const u = getUserById(userId);
+  if (!u) return [];
+  const extra = u._extra || {};
+  return Array.isArray(extra.blocked_user_ids) ? extra.blocked_user_ids : [];
+}
+
+function setBlockedUserIds(userId, ids) {
+  const u = getUserById(userId);
+  if (!u) return false;
+  u._extra = u._extra || {};
+  // Dedup + drop self-blocks; cap at 1000 to bound the list.
+  const cleaned = [...new Set((ids || []).filter(x => x && x !== userId))].slice(0, 1000);
+  u._extra.blocked_user_ids = cleaned;
+  saveUser(u);
+  return true;
+}
+
+function addBlockedUser(blockerId, blockedId) {
+  if (!blockerId || !blockedId || blockerId === blockedId) return false;
+  const list = getBlockedUserIds(blockerId);
+  if (list.includes(blockedId)) return true;
+  return setBlockedUserIds(blockerId, [...list, blockedId]);
+}
+
+function removeBlockedUser(blockerId, blockedId) {
+  const list = getBlockedUserIds(blockerId);
+  return setBlockedUserIds(blockerId, list.filter(id => id !== blockedId));
+}
+
+/// True when either user has blocked the other. Used by conversation /
+/// review filters so a block in either direction hides the relationship
+/// from both sides — symmetric blocks avoid the "I blocked you but I
+/// can still see your replies" UX hole.
+function isBlockedEitherWay(userIdA, userIdB) {
+  if (!userIdA || !userIdB || userIdA === userIdB) return false;
+  return getBlockedUserIds(userIdA).includes(userIdB)
+      || getBlockedUserIds(userIdB).includes(userIdA);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // EXPORTS
 // ══════════════════════════════════════════════════════════════════════════
 
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, getUserByStripeCustomerId, saveUser, deleteUser, deleteUserCascade,
+  getBlockedUserIds, addBlockedUser, removeBlockedUser, isBlockedEitherWay,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing, deleteListing, invalidateListingsCache: _invalidateCache,
   getAllSubmissions,
