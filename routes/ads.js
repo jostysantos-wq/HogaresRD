@@ -332,72 +332,15 @@ router.post('/checkout', userAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/ads/request — broker submits ad for approval (free/manual) ──
-router.post('/request', userAuth, async (req, res) => {
-  const user = store.getUserById(req.user.sub);
-  if (!user || !PRO_ROLES.includes(user.role))
-    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden solicitar anuncios' });
-
-  const { title, description, image_url, target_url, ad_type, placement, start_date, end_date } = req.body;
-  if (!title || !image_url)
-    return res.status(400).json({ error: 'Título e imagen son requeridos' });
-
-  const ad = {
-    id:             uuidv4(),
-    title,
-    advertiser:     user.companyName || user.agencyName || user.name || '',
-    description:    (description || '').slice(0, 500),
-    image_url,
-    target_url:     target_url || '',
-    ad_type:        ad_type || 'fullscreen',
-    placement:      placement || 'feed',
-    budget:         null,
-    priority:       5,
-    audience:       'todos',
-    cooldown_hours: 2,
-    is_active:      false,
-    start_date:     start_date || null,
-    end_date:       end_date || null,
-    impressions:    0,
-    clicks:         0,
-    created_at:     new Date().toISOString(),
-    requested_by:   req.user.sub,
-    request_status: 'pending_approval',
-    requester_name: user.name || '',
-    requester_email: user.email || '',
-  };
-
-  try {
-    const cols = Object.keys(ad);
-    const vals = cols.map(c => ad[c]);
-    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
-    await store.pool.query(
-      `INSERT INTO ads (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`,
-      vals
-    );
-
-    // Notify admin
-    _adMailer.sendMail({
-      to: ADMIN_EMAIL,
-      subject: `Nueva solicitud de anuncio — ${user.name}`,
-      html: et.layout({
-        title: 'Solicitud de anuncio',
-        body: et.p(`<strong>${et.esc(user.name)}</strong> (${et.esc(user.role)}) solicita publicar un anuncio:`)
-          + et.infoTable(
-              et.infoRow('Título', et.esc(title))
-            + et.infoRow('Tipo', ad_type || 'fullscreen')
-            + et.infoRow('Ubicación', placement || 'feed')
-            + (target_url ? et.infoRow('URL destino', et.esc(target_url)) : '')
-          )
-          + et.button('Revisar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`),
-      }),
-    }).catch(() => {});
-
-    res.status(201).json({ ok: true, ad });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// ── POST /api/ads/request — REMOVED ─────────────────────────────────
+// Previously created an ad with status='pending_approval' WITHOUT
+// charging the advertiser. Both web entry points (broker.html and
+// campanas.html) correctly used /checkout (Stripe-gated), but the
+// unused /request route was a wide-open bypass: any pro-role token
+// could POST here to submit an ad for free, get admin approval,
+// and run it without payment. Removed to close the gap. If a
+// comped/manual ad is ever needed, it should go through an
+// admin-only endpoint that records the comp reason for audit.
 
 // ── GET /api/ads/my-requests — broker sees their submitted ads ──
 router.get('/my-requests', userAuth, async (req, res) => {
