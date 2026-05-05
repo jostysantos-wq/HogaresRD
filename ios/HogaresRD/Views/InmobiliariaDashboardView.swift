@@ -4,20 +4,33 @@ import SwiftUI
 
 struct InmobiliariaDashboardView: View {
     @EnvironmentObject var api: APIService
-    @State private var selectedTab = 0
+
+    // Phase C — same 4 sections as the Broker dashboard, plus
+    // Equipo (visible when access >= 2). Each section's sub-tabs
+    // mirror the Broker pattern. Equipo's sub-tabs depend on
+    // access level: 2 = Agentes + Rendimiento, 3 = + Solicitudes
+    // + Secretarias.
+    @State private var section: BrokerDashSection = .inicio
+    @State private var trabajoSub:  Int = 0
+    @State private var analisisSub: Int = 0
+    @State private var carteraSub:  Int = 0
+    @State private var equipoSub:   Int = 0
 
     @State private var teamForLeaderboard: [TeamBroker] = []
 
-    /// Tabs visible based on user's effective access level
-    private var tabs: [String] {
-        let level = api.currentUser?.effectiveAccessLevel ?? 1
-        var t = ["Inicio", "Aplicaciones", "Contactos", "Pagos"]
-        if level >= 2 { t.append(contentsOf: ["Analiticas", "Ventas", "Contabilidad"]) }
-        t.append("Archivo")
-        if level >= 3 { t.append("Auditoria") }
-        t.append("Propiedades")
-        if level >= 2 { t.append(contentsOf: ["Agentes", "Rendimiento"]) }
-        if level >= 3 { t.append(contentsOf: ["Solicitudes", "Secretarias"]) }
+    private var level: Int { api.currentUser?.effectiveAccessLevel ?? 1 }
+
+    private var sections: [BrokerDashSection] {
+        var s: [BrokerDashSection] = [.inicio, .trabajo]
+        if level >= 2 { s.append(.analisis) }
+        s.append(.cartera)
+        if level >= 2 { s.append(.equipo) }
+        return s
+    }
+
+    private var equipoTitles: [String] {
+        var t = ["Agentes", "Rendimiento"]
+        if level >= 3 { t.append(contentsOf: ["Solicitudes", "Secretarías"]) }
         return t
     }
 
@@ -32,79 +45,9 @@ struct InmobiliariaDashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    if i == 0 {
-                                        Image(systemName: "house.fill").font(.system(size: 10))
-                                    } else if title == "Contactos" {
-                                        Image(systemName: "person.crop.rectangle.stack").font(.system(size: 10))
-                                    } else if title == "Pagos" {
-                                        Image(systemName: "creditcard").font(.system(size: 10))
-                                    } else if i >= 10 {
-                                        Image(systemName: title == "Agentes" ? "person.2.fill" : title == "Rendimiento" ? "chart.bar.fill" : title == "Solicitudes" ? "person.badge.plus" : "person.crop.circle.badge.checkmark")
-                                            .font(.system(size: 10))
-                                    }
-                                    Text(title)
-                                }
-                                .font(.caption).bold()
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? (i >= 10 ? Color.rdPurple : Color.rdBlue) : Color(.secondarySystemFill))
-                                .foregroundStyle(selectedTab == i ? .white : .primary)
-                                .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .id(i)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                }
-                .onChange(of: selectedTab) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(selectedTab, anchor: .center)
-                    }
-                }
-            }
-            .background(Color(.systemBackground))
-
+            sectionPillsRow
             Divider()
-
-            // Content
-            TabView(selection: $selectedTab) {
-                // Home overview with leaderboard
-                DashboardHomeView(
-                    showSalesMetrics: (api.currentUser?.effectiveAccessLevel ?? 1) >= 2,
-                    showLeaderboard: (api.currentUser?.effectiveAccessLevel ?? 1) >= 2,
-                    teamMembers: teamForLeaderboard,
-                    onTapTab: { tab in selectedTab = tab + 1 },
-                    onTapMessages: {},
-                    onTapTours: {}
-                ).tag(0)
-                // Reuse broker dashboard tabs
-                DashboardApplicationsTab().tag(1)
-                ContactsListView().tag(2)
-                PaymentsTabView().tag(3)
-                DashboardAnalyticsTab().tag(4)
-                DashboardSalesTab().tag(5)
-                DashboardAccountingTab().tag(6)
-                DashboardArchiveTab().tag(7)
-                DashboardAuditTab().tag(8)
-                DashboardListingAnalyticsTab().tag(9)
-                // Inmobiliaria-only team tabs
-                TeamMembersTab().tag(10)
-                TeamPerformanceTab().tag(11)
-                TeamRequestsTab().tag(12)
-                TeamSecretariesTab().tag(13)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .environmentObject(api)
+            content
         }
         .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.large)
@@ -144,6 +87,148 @@ struct InmobiliariaDashboardView: View {
             if let team = try? await api.getTeamBrokers() {
                 teamForLeaderboard = team.brokers
             }
+        }
+    }
+
+    // MARK: - Section pills + content
+
+    @ViewBuilder
+    private var sectionPillsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(sections, id: \.self) { s in
+                    sectionPill(s)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+        }
+        .background(Color(.systemBackground))
+    }
+
+    private func sectionPill(_ s: BrokerDashSection) -> some View {
+        let isTeam = s == .equipo
+        return Button {
+            withAnimation(Motion.layout) { section = s }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: s.icon).font(.system(size: 11))
+                Text(s.label).font(.caption.bold())
+            }
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(section == s
+                ? (isTeam ? Color.rdPurple : Color.rdBlue)
+                : Color(.secondarySystemFill))
+            .foregroundStyle(section == s ? .white : .primary)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch section {
+        case .inicio:
+            DashboardHomeView(
+                showSalesMetrics: level >= 2,
+                showLeaderboard:  level >= 2,
+                teamMembers: teamForLeaderboard,
+                onTapTab: { tab in navigateToOldTab(tab) },
+                onTapMessages: {},
+                onTapTours: {},
+                onTapPipelineStage: { _ in
+                    section = .trabajo
+                    trabajoSub = 0
+                }
+            )
+            .environmentObject(api)
+        case .trabajo:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $trabajoSub, titles: ["Aplicaciones", "Contactos", "Pagos"])
+                Group {
+                    switch trabajoSub {
+                    case 0: DashboardApplicationsTab()
+                    case 1: ContactsListView()
+                    default: PaymentsTabView()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .analisis:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $analisisSub, titles: ["Analíticas", "Ventas", "Contabilidad"])
+                Group {
+                    switch analisisSub {
+                    case 0: DashboardAnalyticsTab()
+                    case 1: DashboardSalesTab()
+                    default: DashboardAccountingTab()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .cartera:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $carteraSub, titles: ["Propiedades", "Archivo", "Auditoría"])
+                Group {
+                    switch carteraSub {
+                    case 0: DashboardListingAnalyticsTab()
+                    case 1: DashboardArchiveTab()
+                    default: DashboardAuditTab()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .equipo:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $equipoSub, titles: equipoTitles)
+                Group {
+                    switch equipoSub {
+                    case 0: TeamMembersTab()
+                    case 1: TeamPerformanceTab()
+                    case 2: TeamRequestsTab()
+                    default: TeamSecretariesTab()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    private func segmentedSubBar(sub: Binding<Int>, titles: [String]) -> some View {
+        Picker("", selection: sub) {
+            ForEach(Array(titles.enumerated()), id: \.offset) { idx, title in
+                Text(title).tag(idx)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+    }
+
+    /// Same legacy-tab bridge as the broker dashboard, with extra
+    /// tags 10–13 mapping to the equipo sub-tabs.
+    private func navigateToOldTab(_ tab: Int) {
+        switch tab {
+        case 0:    section = .trabajo;  trabajoSub = 0
+        case 1:    section = .trabajo;  trabajoSub = 1
+        case 2:    section = .trabajo;  trabajoSub = 2
+        case 3:    section = .analisis; analisisSub = 0
+        case 4:    section = .trabajo;  trabajoSub = 0    // legacy docs route → Aplicaciones
+        case 5:    section = .analisis; analisisSub = 1
+        case 6:    section = .analisis; analisisSub = 2
+        case 7:    section = .cartera;  carteraSub = 1
+        case 8:    section = .cartera;  carteraSub = 2
+        case 9:    section = .cartera;  carteraSub = 0
+        case 10:   section = .equipo;   equipoSub = 0
+        case 11:   section = .equipo;   equipoSub = 1
+        case 12:   section = .equipo;   equipoSub = 2
+        case 13:   section = .equipo;   equipoSub = 3
+        default:   section = .trabajo;  trabajoSub = 0
         }
     }
 }

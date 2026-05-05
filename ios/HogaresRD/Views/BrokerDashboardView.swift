@@ -1,74 +1,62 @@
 import SwiftUI
 import SafariServices
 
+// MARK: - Broker / Inmobiliaria dashboard sections
+//
+// Single enum shared across BrokerDashboardView and
+// InmobiliariaDashboardView so the section model stays consistent.
+// Broker shows the first 4; Inmobiliaria adds .equipo when the
+// user has the right access level.
+
+enum BrokerDashSection: Hashable {
+    case inicio
+    case trabajo
+    case analisis
+    case cartera
+    case equipo
+
+    var label: String {
+        switch self {
+        case .inicio:   return "Inicio"
+        case .trabajo:  return "Trabajo"
+        case .analisis: return "Análisis"
+        case .cartera:  return "Cartera"
+        case .equipo:   return "Equipo"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .inicio:   return "house.fill"
+        case .trabajo:  return "doc.text.fill"
+        case .analisis: return "chart.bar.fill"
+        case .cartera:  return "building.2.fill"
+        case .equipo:   return "person.2.fill"
+        }
+    }
+}
+
 // MARK: - Broker Dashboard (Main)
 
 struct BrokerDashboardView: View {
     @EnvironmentObject var api: APIService
-    @State private var selectedTab = 0
 
-    private let tabs = ["Inicio", "Aplicaciones", "Contactos", "Pagos", "Analiticas", "Ventas", "Contabilidad", "Archivo", "Auditoria", "Propiedades"]
+    // Phase C — 10 horizontal pills collapsed into 4 sections.
+    // Sub-tabs live INSIDE each section via a segmented Picker so
+    // the user only sees 4 visible pills at once. Each section
+    // remembers its sub-state independently.
+    @State private var section: BrokerDashSection = .inicio
+    @State private var trabajoSub: Int = 0      // [Aplicaciones, Contactos, Pagos]
+    @State private var analisisSub: Int = 0     // [Analíticas, Ventas, Contabilidad]
+    @State private var carteraSub: Int = 0      // [Propiedades, Archivo, Auditoría]
+
+    private var sections: [BrokerDashSection] { [.inicio, .trabajo, .analisis, .cartera] }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    if i == 0 {
-                                        Image(systemName: "house.fill")
-                                            .font(.system(size: 10))
-                                    }
-                                    Text(title)
-                                        .font(.caption).bold()
-                                }
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? Color.rdBlue : Color(.secondarySystemFill))
-                                .foregroundStyle(selectedTab == i ? .white : .primary)
-                                .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .id(i)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                }
-                .onChange(of: selectedTab) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(selectedTab, anchor: .center)
-                    }
-                }
-            }
-            .background(Color(.systemBackground))
-
+            sectionPillsRow
             Divider()
-
-            // Content
-            TabView(selection: $selectedTab) {
-                DashboardHomeView(
-                    showSalesMetrics: true,
-                    onTapTab: { tab in selectedTab = tab + 1 },
-                    onTapMessages: {},
-                    onTapTours: {}
-                ).tag(0)
-                DashboardApplicationsTab().tag(1)
-                ContactsListView().tag(2)
-                PaymentsTabView().tag(3)
-                DashboardAnalyticsTab().tag(4)
-                DashboardSalesTab().tag(5)
-                DashboardAccountingTab().tag(6)
-                DashboardArchiveTab().tag(7)
-                DashboardAuditTab().tag(8)
-                DashboardListingAnalyticsTab().tag(9)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .environmentObject(api)
+            content
         }
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.large)
@@ -97,6 +85,138 @@ struct BrokerDashboardView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 brokerMoreMenu
             }
+        }
+    }
+
+    // MARK: - Section pills + content
+
+    /// 4 visible pills (Inicio · Trabajo · Análisis · Cartera).
+    /// Replaces the previous 10-pill horizontal scroll — much more
+    /// scannable, and groups related sub-screens together.
+    @ViewBuilder
+    private var sectionPillsRow: some View {
+        HStack(spacing: 8) {
+            ForEach(sections, id: \.self) { s in
+                sectionPill(s)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
+    }
+
+    private func sectionPill(_ s: BrokerDashSection) -> some View {
+        Button {
+            withAnimation(Motion.layout) { section = s }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: s.icon).font(.system(size: 11))
+                Text(s.label).font(.caption.bold())
+            }
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(section == s ? Color.rdBlue : Color(.secondarySystemFill))
+            .foregroundStyle(section == s ? .white : .primary)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch section {
+        case .inicio:
+            DashboardHomeView(
+                showSalesMetrics: true,
+                onTapTab: { tab in navigateToOldTab(tab) },
+                onTapMessages: {},
+                onTapTours: {},
+                onTapPipelineStage: { _ in
+                    section = .trabajo
+                    trabajoSub = 0
+                }
+            )
+            .environmentObject(api)
+        case .trabajo:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $trabajoSub, titles: ["Aplicaciones", "Contactos", "Pagos"])
+                Group {
+                    switch trabajoSub {
+                    case 0: DashboardApplicationsTab()
+                    case 1: ContactsListView()
+                    default: PaymentsTabView()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .analisis:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $analisisSub, titles: ["Analíticas", "Ventas", "Contabilidad"])
+                Group {
+                    switch analisisSub {
+                    case 0: DashboardAnalyticsTab()
+                    case 1: DashboardSalesTab()
+                    default: DashboardAccountingTab()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .cartera:
+            VStack(spacing: 0) {
+                segmentedSubBar(sub: $carteraSub, titles: ["Propiedades", "Archivo", "Auditoría"])
+                Group {
+                    switch carteraSub {
+                    case 0: DashboardListingAnalyticsTab()
+                    case 1: DashboardArchiveTab()
+                    default: DashboardAuditTab()
+                    }
+                }
+                .environmentObject(api)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .equipo:
+            // Broker dashboard never shows .equipo; the case is here
+            // so the enum is shared with InmobiliariaDashboardView.
+            EmptyView()
+        }
+    }
+
+    /// Segmented picker shared by all multi-sub-tab sections. Caller
+    /// renders the body below in its own switch.
+    private func segmentedSubBar(sub: Binding<Int>, titles: [String]) -> some View {
+        Picker("", selection: sub) {
+            ForEach(Array(titles.enumerated()), id: \.offset) { idx, title in
+                Text(title).tag(idx)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+    }
+
+    /// Bridges DashboardHomeView's legacy `onTapTab(Int)` callbacks to
+    /// the new section + sub-tab model. Each numeric input represents
+    /// the old single-tab index minus one (the old code did
+    /// `selectedTab = tab + 1` inside the closure). The pre-existing
+    /// "documents pendientes → tab 4" route was conceptually wrong
+    /// (old tab 4 was Ventas) — now consolidated to Aplicaciones,
+    /// where the docs status filter actually lives.
+    private func navigateToOldTab(_ tab: Int) {
+        switch tab {
+        case 0:    section = .trabajo;  trabajoSub = 0     // Aplicaciones
+        case 1:    section = .trabajo;  trabajoSub = 1     // Contactos
+        case 2:    section = .trabajo;  trabajoSub = 2     // Pagos
+        case 3:    section = .analisis; analisisSub = 0    // Analíticas
+        case 4:    section = .trabajo;  trabajoSub = 0     // (was Ventas; now docs land in Aplicaciones)
+        case 5:    section = .analisis; analisisSub = 1    // Ventas
+        case 6:    section = .analisis; analisisSub = 2    // Contabilidad
+        case 7:    section = .cartera;  carteraSub = 1     // Archivo
+        case 8:    section = .cartera;  carteraSub = 2     // Auditoría
+        case 9:    section = .cartera;  carteraSub = 0     // Propiedades
+        default:   section = .trabajo;  trabajoSub = 0
         }
     }
 
