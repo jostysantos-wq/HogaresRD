@@ -1418,6 +1418,52 @@ struct ProfileActionRow: View {
     }
 }
 
+/// Toggle-style row inside a ProfileSectionCard. Same icon-tile +
+/// label + optional sub layout as the nav rows, but the trailing
+/// element is a SwiftUI Toggle (or a ProgressView while `loading`).
+struct ProfileToggleRow: View {
+    let icon: String
+    var iconAccent: Color = .primary
+    let label: String
+    let sub: String?
+    @Binding var isOn: Bool
+    var loading: Bool = false
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.rdCreamDeep)
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(iconAccent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(.primary)
+                if let sub, !sub.isEmpty {
+                    Text(sub)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 8)
+            if loading {
+                ProgressView()
+            } else {
+                Toggle("", isOn: $isOn)
+                    .labelsHidden()
+                    .tint(Color.rdAccent)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+    }
+}
+
 struct ProfileExternalRow: View {
     let icon: String
     let label: String

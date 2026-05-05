@@ -594,25 +594,33 @@ struct NotificationSettingsView: View {
     @State private var appUpdates: Bool    = Self.loadBool("notif_appUpdates")
 
     var body: some View {
-        listContent
-            .navigationTitle("Notificaciones")
-            .navigationBarTitleDisplayMode(.inline)
-            .task { await initialLoad() }
-            .onChange(of: pushEnabled, handlePushEnabledChange)
-            .onChange(of: pushService.isAuthorized, handleAuthChange)
-            .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings"); syncNotifPref("notif_newListings", v) }
-            .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops"); syncNotifPref("notif_priceDrops", v) }
-            .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar"); syncNotifPref("notif_similar", v) }
-            .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages"); syncNotifPref("notif_agentMessages", v) }
-            .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates"); syncNotifPref("notif_appUpdates", v) }
-    }
-
-    private var listContent: some View {
-        List {
-            pushSection
-            propertyAlertsSection
-            generalSection
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                pushHeroCard
+                if let err = errorMsg {
+                    errorBanner(err)
+                }
+                if !pushService.isAuthorized && pushEnabled == false {
+                    pushDeniedCard
+                }
+                propertyAlertsSection
+                generalSection
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 24)
         }
+        .background(ProfileBackdrop())
+        .navigationTitle("Notificaciones")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await initialLoad() }
+        .onChange(of: pushEnabled, handlePushEnabledChange)
+        .onChange(of: pushService.isAuthorized, handleAuthChange)
+        .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings"); syncNotifPref("notif_newListings", v) }
+        .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops"); syncNotifPref("notif_priceDrops", v) }
+        .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar"); syncNotifPref("notif_similar", v) }
+        .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages"); syncNotifPref("notif_agentMessages", v) }
+        .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates"); syncNotifPref("notif_appUpdates", v) }
     }
 
     private func handlePushEnabledChange(_ oldVal: Bool, _ newVal: Bool) {
@@ -633,107 +641,150 @@ struct NotificationSettingsView: View {
 
     // MARK: - Sections (split to help the Swift type-checker)
 
+    /// Master "Notificaciones push" hero. Bigger than the row-level
+    /// toggles below to signal that this gate is the prerequisite for
+    /// every individual category — when it's off, none of the
+    /// category-level preferences fire.
     @ViewBuilder
-    private var pushSection: some View {
-        Section {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
-                    Image(systemName: "bell.badge.fill").foregroundStyle(Color.rdBlue)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Notificaciones push").font(.subheadline).bold()
-                    Text("Recibe alertas en tiempo real sobre propiedades, mensajes y actualizaciones.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+    private var pushHeroCard: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.rdAccent.opacity(0.13))
+                    .frame(width: 48, height: 48)
+                Image(systemName: pushEnabled ? "bell.badge.fill" : "bell.slash.fill")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(Color.rdAccent)
             }
-            .padding(.vertical, 4)
-
-            HStack {
-                Label(pushEnabled ? "Activadas" : "Desactivadas",
-                      systemImage: pushEnabled ? "bell.fill" : "bell.slash.fill")
-                Spacer()
-                if loading {
-                    ProgressView()
-                } else {
-                    Toggle("", isOn: $pushEnabled).labelsHidden().disabled(loading)
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Notificaciones push")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Alertas en tiempo real sobre propiedades, mensajes y actualizaciones.")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            if !pushService.isAuthorized && pushEnabled == false {
-                pushDeniedHint
-            }
-
-            if let err = errorMsg {
-                Label(err, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption).foregroundStyle(.red)
+            Spacer(minLength: 8)
+            if loading {
+                ProgressView()
+            } else {
+                Toggle("", isOn: $pushEnabled)
+                    .labelsHidden()
+                    .tint(Color.rdAccent)
+                    .disabled(loading)
             }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.systemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.03), radius: 8, y: 2)
+    }
+
+    private func errorBanner(_ msg: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+            Text(msg)
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     @ViewBuilder
-    private var pushDeniedHint: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private var pushDeniedCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Image(systemName: "info.circle.fill").foregroundStyle(.orange).font(.caption)
-                Text("Las notificaciones push no estan habilitadas en los ajustes del sistema.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Image(systemName: "info.circle.fill")
+                    .foregroundStyle(.orange)
+                Text("Permisos del sistema desactivados")
+                    .font(.caption.bold())
+                    .foregroundStyle(.primary)
             }
+            Text("Las notificaciones push no están habilitadas en los ajustes del sistema, así que las preferencias de abajo no podrán enviar alertas hasta que se concedan.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Label("Abrir Ajustes", systemImage: "arrow.up.forward.app")
-                    .font(.caption.bold()).foregroundStyle(Color.rdBlue)
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.forward.app")
+                    Text("Abrir Ajustes")
+                }
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(Color.rdAccent, in: Capsule())
             }
         }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
     private var propertyAlertsSection: some View {
-        Section("Alertas de propiedades") {
-            Toggle(isOn: $newListings) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Nuevas propiedades")
-                    Text("Notificaciones de nuevos listados que coinciden con tus criterios")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            Toggle(isOn: $priceDrops) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Bajas de precio")
-                    Text("Alertas cuando bajan los precios de propiedades guardadas")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            Toggle(isOn: $similar) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Propiedades similares")
-                    Text("Sugerencias basadas en tus búsquedas recientes")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
+        ProfileSectionCard(title: "Alertas de propiedades") {
+            ProfileToggleRow(
+                icon: "house.badge.exclamationmark.fill",
+                iconAccent: Color.rdAccent,
+                label: "Nuevas propiedades",
+                sub: "Listados que coinciden con tus criterios",
+                isOn: $newListings
+            )
+            Divider().padding(.leading, 64)
+            ProfileToggleRow(
+                icon: "tag.fill",
+                iconAccent: Color.rdGold,
+                label: "Bajas de precio",
+                sub: "Cuando bajan precios de propiedades guardadas",
+                isOn: $priceDrops
+            )
+            Divider().padding(.leading, 64)
+            ProfileToggleRow(
+                icon: "sparkles",
+                iconAccent: Color.rdTeal,
+                label: "Propiedades similares",
+                sub: "Sugerencias basadas en tus búsquedas recientes",
+                isOn: $similar
+            )
         }
     }
 
     @ViewBuilder
     private var generalSection: some View {
-        Section("General") {
-            Toggle(isOn: $agentMessages) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Mensajes de agentes")
-                    Text("Notificaciones cuando un agente te envía un mensaje")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            Toggle(isOn: $appUpdates) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Actualizaciones de aplicación")
-                    Text("Novedades y mejoras de HogaresRD")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
+        ProfileSectionCard(title: "General") {
+            ProfileToggleRow(
+                icon: "bubble.left.and.bubble.right.fill",
+                iconAccent: Color.rdBlue,
+                label: "Mensajes de agentes",
+                sub: "Cuando un agente te envía un mensaje",
+                isOn: $agentMessages
+            )
+            Divider().padding(.leading, 64)
+            ProfileToggleRow(
+                icon: "sparkle",
+                iconAccent: Color.rdGreen,
+                label: "Actualizaciones de aplicación",
+                sub: "Novedades y mejoras de HogaresRD",
+                isOn: $appUpdates
+            )
         }
     }
 
