@@ -43,7 +43,7 @@ struct PushPermissionPrimer: View {
                 }
             }
             .padding(24)
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
             .padding(.horizontal, 28)

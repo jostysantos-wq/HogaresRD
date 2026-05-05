@@ -256,7 +256,7 @@ struct DashboardListingAnalyticsTab: View {
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemBackground))
         .task { await loadData() }
         .sheet(item: $selectedListing) { listing in
             ListingAnalyticsDetailView(listingId: listing.id)
@@ -660,7 +660,7 @@ struct ListingPromoSheet: View {
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemBackground))
         .navigationTitle("Promocionar")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -894,7 +894,7 @@ struct ListingAnalyticsDetailView: View {
                         .padding(.top, 60)
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .navigationTitle("Detalle de Propiedad")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

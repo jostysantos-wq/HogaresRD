@@ -568,7 +568,7 @@ struct ReviewPaymentSheet: View {
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemBackground))
         .navigationTitle("Revisar Pago")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

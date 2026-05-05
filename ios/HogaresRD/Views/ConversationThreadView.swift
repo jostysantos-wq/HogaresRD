@@ -206,16 +206,11 @@ struct ConversationThreadView: View {
 
     static let chatTeal = Color(red: 96/255, green: 178/255, blue: 170/255)
 
-    private var chatBackground: Color {
-        colorScheme == .dark
-            ? Color(red: 0.07, green: 0.08, blue: 0.09)
-            : Color(red: 0.95, green: 0.94, blue: 0.91)
-    }
-    private var cardBackground: Color {
-        colorScheme == .dark
-            ? Color(red: 0.13, green: 0.14, blue: 0.16)
-            : .white
-    }
+    // Harmonized to the system page background (white in light mode,
+    // near-black in dark) — the previous warm cream made the chat
+    // screen feel "nude" against the rest of the app.
+    private var chatBackground: Color { Color(.systemBackground) }
+    private var cardBackground: Color { Color(.secondarySystemGroupedBackground) }
     private var theirBubbleBackground: Color {
         colorScheme == .dark
             ? Color(red: 0.16, green: 0.17, blue: 0.19)

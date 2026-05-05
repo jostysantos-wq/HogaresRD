@@ -34,6 +34,8 @@ struct AgencyPostsView: View {
                     .onDelete(perform: deleteAt)
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemBackground))
             }
         }
         .navigationTitle("Publicaciones")

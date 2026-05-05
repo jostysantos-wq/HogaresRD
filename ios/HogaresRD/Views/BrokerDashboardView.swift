@@ -2022,7 +2022,7 @@ struct ReviewDocumentSheet: View {
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemBackground))
         .navigationTitle("Revisar Documento")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

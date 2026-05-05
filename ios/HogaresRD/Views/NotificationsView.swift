@@ -427,7 +427,7 @@ struct NotificationSettingsView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                .stroke(Color.black.opacity(0.08), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.03), radius: 8, y: 2)
     }
@@ -710,7 +710,7 @@ struct AppSettingsView: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.rdCreamDeep)
+                    .fill(Color(.tertiarySystemFill))
                     .frame(width: 36, height: 36)
                 Image(systemName: label == "Versión" ? "app.badge.fill" : "hammer.fill")
                     .font(.system(size: 16, weight: .medium))
@@ -742,7 +742,7 @@ private struct ThemeOptionRow: View {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isSelected ? option.accent.opacity(0.18) : Color.rdCreamDeep)
+                        .fill(isSelected ? option.accent.opacity(0.18) : Color(.tertiarySystemFill))
                         .frame(width: 36, height: 36)
                     Image(systemName: option.icon)
                         .font(.system(size: 16, weight: .medium))

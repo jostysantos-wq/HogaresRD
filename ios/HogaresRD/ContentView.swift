@@ -505,7 +505,7 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .padding(24)
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
             .padding(.horizontal, 28)
@@ -1147,7 +1147,7 @@ private struct ProfileHeroCard: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.04), radius: 12, y: 4)
             .padding(.top, 58)   // pushes the card down so the avatar floats above
@@ -1204,7 +1204,7 @@ private struct ProfileHeroCard: View {
     private var avatar: some View {
         ZStack {
             Circle()
-                .fill(Color.rdCream)
+                .fill(Color(.systemBackground))
                 .frame(width: 116, height: 116)
                 .shadow(color: Color.rdAccent.opacity(0.18), radius: 14, y: 4)
             AvatarView(user: user, size: 108, editable: true, color: Color.rdAccent)
@@ -1232,10 +1232,10 @@ private struct ProfileHeroCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 11)
         .padding(.horizontal, 6)
-        .background(Color.rdCreamDeep)
+        .background(Color(.tertiarySystemFill))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                .stroke(Color.black.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
@@ -1257,31 +1257,17 @@ private struct ProfileHeroCard: View {
 
 // MARK: - Profile Backdrop
 //
-// Soft warm cream gradient with a subtle gold + terracotta wash at
-// the top — matches the iOS profile design's "ellipse 80% 30% at
-// 50% 0%" radial accents. Reused by ProfileTabView's tab and by
-// the Cuenta y seguridad detail screen so the cream feels continuous.
+// Plain system background — used to read as a soft cream wash with a
+// gold + terracotta gradient at the top, but the user reported the
+// app "flipped between white and a nude colour" between editorial
+// screens and the rest of the app. Harmonized to white so the
+// background is visually consistent everywhere. The struct stays
+// (rather than removing every call site) so future screens that
+// want extra wash can opt back in with a single edit.
 
 struct ProfileBackdrop: View {
     var body: some View {
-        ZStack {
-            Color.rdCream.ignoresSafeArea()
-            VStack(spacing: 0) {
-                LinearGradient(
-                    colors: [
-                        Color.rdGold.opacity(0.18),
-                        Color.rdAccent.opacity(0.10),
-                        Color.clear,
-                    ],
-                    startPoint: .top,
-                    endPoint:   .bottom
-                )
-                .frame(height: 220)
-                .blur(radius: 60)
-                Spacer()
-            }
-            .ignoresSafeArea()
-        }
+        Color(.systemBackground).ignoresSafeArea()
     }
 }
 
@@ -1312,7 +1298,7 @@ struct ProfileSectionCard<Content: View>: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: .black.opacity(0.03), radius: 8, y: 2)
@@ -1338,7 +1324,7 @@ struct ProfileRowLabel: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(danger ? Color.rdAccent.opacity(0.12) : Color.rdCreamDeep)
+                    .fill(danger ? Color.rdAccent.opacity(0.12) : Color(.tertiarySystemFill))
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
@@ -1448,7 +1434,7 @@ struct ProfileToggleRow: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.rdCreamDeep)
+                    .fill(Color(.tertiarySystemFill))
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
@@ -1489,7 +1475,7 @@ struct ProfileExternalRow: View {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.rdCreamDeep)
+                        .fill(Color(.tertiarySystemFill))
                         .frame(width: 36, height: 36)
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .medium))

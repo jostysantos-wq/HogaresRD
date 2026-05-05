@@ -35,6 +35,8 @@ struct LeadQueueView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemBackground))
             }
         }
         .navigationTitle("Cola de leads")

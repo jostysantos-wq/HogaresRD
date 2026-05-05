@@ -52,6 +52,8 @@ struct CommissionHistoryView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemBackground))
             }
         }
         .navigationTitle("Historial de comisión")

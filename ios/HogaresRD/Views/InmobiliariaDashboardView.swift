@@ -1316,7 +1316,7 @@ struct TeamSecretariesTab: View {
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemBackground))
         .task { await load(initial: true) }
         .refreshable { await load(initial: false) }
         .alert("Remover Secretaria", isPresented: $showRemoveAlert) {

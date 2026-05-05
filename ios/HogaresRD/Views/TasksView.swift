@@ -256,7 +256,7 @@ struct TasksView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .background(Color(.systemGroupedBackground))
+                .background(Color(.systemBackground))
                 .refreshable { await load() }
             }
         }
@@ -2469,7 +2469,7 @@ struct RejectTaskSheet: View {
                 }
                 .padding(20)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .navigationTitle("Enviar para Revisión")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
