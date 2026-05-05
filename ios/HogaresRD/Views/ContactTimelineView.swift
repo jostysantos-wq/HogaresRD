@@ -59,19 +59,11 @@ struct ContactTimelineView: View {
                     }
                     .padding(.top, 40)
                 } else if events.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.secondary)
-                        Text("Sin actividad")
-                            .font(.headline)
-                        Text("No hay eventos registrados para este contacto.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 40)
-                    .padding(.horizontal)
+                    ContentUnavailableView(
+                        "Sin actividad",
+                        systemImage: "clock.arrow.circlepath",
+                        description: Text("No hay eventos registrados para este contacto.")
+                    )
                 } else {
                     // Timeline
                     LazyVStack(spacing: 0) {

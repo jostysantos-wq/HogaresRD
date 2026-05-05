@@ -89,6 +89,7 @@
 		PARITYUIB070000000000000 /* LeaveInmobiliariaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF070000000000000 /* LeaveInmobiliariaView.swift */; };
 		PARITYUIB080000000000000 /* CommissionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF080000000000000 /* CommissionHistoryView.swift */; };
 		PARITYUIB090000000000000 /* TaskRelationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF090000000000000 /* TaskRelationsView.swift */; };
+		PARITYUIB0A0000000000000 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF0A0000000000000 /* DesignSystem.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -176,6 +177,7 @@
 		PARITYUIF070000000000000 /* LeaveInmobiliariaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaveInmobiliariaView.swift; sourceTree = "<group>"; };
 		PARITYUIF080000000000000 /* CommissionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommissionHistoryView.swift; sourceTree = "<group>"; };
 		PARITYUIF090000000000000 /* TaskRelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRelationsView.swift; sourceTree = "<group>"; };
+		PARITYUIF0A0000000000000 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -315,6 +317,7 @@
 				PARITYUIF070000000000000 /* LeaveInmobiliariaView.swift */,
 				PARITYUIF080000000000000 /* CommissionHistoryView.swift */,
 				PARITYUIF090000000000000 /* TaskRelationsView.swift */,
+				PARITYUIF0A0000000000000 /* DesignSystem.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -470,6 +473,7 @@
 				PARITYUIB070000000000000 /* LeaveInmobiliariaView.swift in Sources */,
 				PARITYUIB080000000000000 /* CommissionHistoryView.swift in Sources */,
 				PARITYUIB090000000000000 /* TaskRelationsView.swift in Sources */,
+				PARITYUIB0A0000000000000 /* DesignSystem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

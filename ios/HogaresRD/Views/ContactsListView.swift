@@ -49,20 +49,15 @@ struct ContactsListView: View {
                     Spacer()
                 }
             } else if filtered.isEmpty {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "person.2.slash")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary)
-                    Text(searchText.isEmpty ? "No hay contactos aun" : "Sin resultados")
-                        .font(.headline)
-                    Text(searchText.isEmpty ? "Los clientes que interactuen contigo apareceran aqui." : "Intenta con otro termino de busqueda.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Spacer()
+                if searchText.isEmpty {
+                    ContentUnavailableView(
+                        "No hay contactos aún",
+                        systemImage: "person.2.slash",
+                        description: Text("Los clientes que interactúen contigo aparecerán aquí.")
+                    )
+                } else {
+                    ContentUnavailableView.search(text: searchText)
                 }
-                .padding(.horizontal)
             } else {
                 // Stats bar
                 HStack(spacing: 16) {

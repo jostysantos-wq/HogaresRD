@@ -46,6 +46,42 @@ Stripe subscriptions: Broker ($10/mo), Inmobiliaria ($25/mo), Constructora ($25/
 - **`/mobile/`** — React Native Expo app. Set `API_BASE` in `constants/api.ts` for local dev (`http://192.168.1.XXX:3000/api`) vs production.
 - **`/ios/`** — Native Swift/Xcode app. Bundle ID: `com.josty.hogaresrd`. Uses Sign in with Apple (required for App Store compliance).
 
+## iOS design contract
+
+Three pillars (Apple's *Hierarchy, Harmony, Consistency* — the iOS 26 / Liquid Glass framing). Every new screen + every refactor follows these rules.
+
+### Visual language
+- **Page background** — `Color(.systemBackground)` (white in light, near-black in dark). Never cream / warm-grey / off-white. The `rdCream` / `rdCreamDeep` tokens still exist but are unused; do not reach for them on screen surfaces.
+- **Cards on pages** — `Color(.secondarySystemGroupedBackground)`, `cornerRadius: 16` continuous, `1 pt` stroke at `Color.black.opacity(0.08)`, `shadow(black.opacity(0.06), radius: 8, y: 2)`. Use `ProfileSectionCard` to get this for free.
+- **Tinted icon tiles** — `Color(.tertiarySystemFill)` 36×36 with `cornerRadius: 10`, foreground accent in the row's brand colour.
+- **Brand tint** — active toolbar buttons + primary CTAs default to `Color.rdBlue`. Status colours from `Color.rdRed / rdGreen / rdOrange / rdPurple / rdTeal / rdGold / rdAccent` — all adaptive UIColor closures (no `Color(red:..., green:..., blue:...)` literals — they ignore Dark Mode).
+- **Typography** — system sans (San Francisco) for everything; `.heroSerif()` *only* on hero titles (profile name, hero KPIs, large editorial titles). Never on rows, body copy, eyebrow labels, or chips.
+
+### Motion
+Animation values come from `Motion.snappy / arrival / layout / fade` (in `ios/HogaresRD/Views/DesignSystem.swift`). Do not write `.spring(response:...)` or `.easeInOut(duration:...)` inline; use the named tokens so the whole app shares timing.
+
+| Token | When |
+|---|---|
+| `Motion.snappy` | Button taps, card press, pill toggle |
+| `Motion.arrival` | Rows materialising, content arriving from a sheet |
+| `Motion.layout` | Segmented swap, filter chip selection, tab content |
+| `Motion.fade` | Banners, toasts, hint visibility |
+
+### Empty states
+Use `ContentUnavailableView` (iOS 17+) directly, or the `EmptyState.plain(...)` / `EmptyState.actionable(...)` helpers in `DesignSystem.swift`. Custom `VStack` empty states are forbidden going forward — the list of "Sin X" surfaces should all share the same shape.
+
+### Navigation rule (3 paradigms, 3 jobs)
+| Paradigm | Use when | Examples |
+|---|---|---|
+| `NavigationLink` (push) | Drilling down to a detail of the current context | Listing detail, application detail, conversation thread |
+| `.sheet` | Creating, editing, or completing a quick action that returns to the current screen | New listing, edit profile, file a report, plans/subscription |
+| `.fullScreenCover` | Hijacking the screen on purpose: deep-link landings, ads, onboarding | Universal-link → listing, full-screen ad popup, auth onboarding |
+
+If a screen breaks the rule, document the why with a code comment.
+
+### Bottom tab bar
+The system `TabView` with `.tabItem` + `.badge` is canonical. The iOS 26 Liquid Glass material is automatic. Never re-introduce a custom `FloatingTabBar`.
+
 ### Static Frontend (`/public/`)
 Vanilla JS + HTML. Translations in `/public/locales/` (Spanish-first / Dominican Spanish, English fallback). Uploaded files land in `/public/uploads/` (photos, blueprints, avatars, ads).
 

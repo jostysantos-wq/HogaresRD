@@ -66,19 +66,11 @@ struct LeadQueueView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "tray")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("No hay leads en cola")
-                .font(.headline)
-            Text("Cuando un cliente envíe una consulta sobre una propiedad afiliada a tu equipo, aparecerá aquí. Las ofertas exclusivas duran 15 minutos.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ContentUnavailableView(
+            "No hay leads en cola",
+            systemImage: "tray",
+            description: Text("Cuando un cliente envíe una consulta sobre una propiedad afiliada a tu equipo, aparecerá aquí. Las ofertas exclusivas duran 15 minutos.")
+        )
     }
 
     @ViewBuilder

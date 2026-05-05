@@ -2362,18 +2362,9 @@ private func formatCurrency(_ value: Double) -> String {
 }
 
 private func emptyState(icon: String, title: String, subtitle: String) -> some View {
-    VStack(spacing: 14) {
-        Image(systemName: icon)
-            .font(.system(size: 44))
-            .foregroundStyle(Color(.tertiaryLabel))
-        Text(title)
-            .font(.headline)
-            .foregroundStyle(.secondary)
-        Text(subtitle)
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .multilineTextAlignment(.center)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 40)
+    // Standardised on the system ContentUnavailableView (iOS 17+).
+    // Migrating the helper updates every call site at once
+    // (DashboardApplicationsTab, DashboardSalesTab, DashboardArchiveTab,
+    // DashboardAuditTab) to the system-native pattern.
+    ContentUnavailableView(title, systemImage: icon, description: Text(subtitle))
 }

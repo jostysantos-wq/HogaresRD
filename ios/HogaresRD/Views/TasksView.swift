@@ -600,7 +600,7 @@ struct TasksView: View {
                 ForEach(TaskFilter.allCases) { f in
                     let count = filterCount(for: f)
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { filter = f }
+                        withAnimation(Motion.layout) { filter = f }
                     } label: {
                         HStack(spacing: 6) {
                             Text(f.rawValue)

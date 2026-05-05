@@ -73,19 +73,11 @@ struct AgencyPostsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "doc.text.image")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("Aún no has publicado nada")
-                .font(.headline)
-            Text("Comparte novedades, artículos y casos de éxito con tus clientes y agentes. Toca el + para crear tu primera publicación.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ContentUnavailableView(
+            "Aún no has publicado nada",
+            systemImage: "doc.text.image",
+            description: Text("Comparte novedades, artículos y casos de éxito con tus clientes y agentes. Toca el + para crear tu primera publicación.")
+        )
     }
 
     @ViewBuilder
