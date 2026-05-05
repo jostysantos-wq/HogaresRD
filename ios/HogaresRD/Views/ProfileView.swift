@@ -1,227 +1,108 @@
 import SwiftUI
 import PhotosUI
 
+// MARK: - Cuenta y seguridad
+//
+// Detail screen reached from ProfileTabView's "Cuenta y seguridad"
+// row. Restyled with the editorial profile components (cream
+// backdrop, rounded section cards, tinted icon tiles) so the flow
+// matches the redesigned tab.
+//
+// Items dropped from the previous version because they're already
+// surfaced on the parent tab (ProfileTabView):
+//   • Avatar / name / email header — replaced by the parent's hero
+//     card (avatar floats over the white card with name + KPIs).
+//   • "Plan / Suscripción" — already in the parent's General section
+//     under "Suscripción". Both rows opened the same PlansView sheet,
+//     so showing it in two places was just clutter.
+//
+// What stays: editable profile info (mi-cuenta#perfil parity), the
+// security pair (password + 2FA), and the privacy pair (data export
+// + blocked users). The guest path is gone — the parent gates this
+// screen behind `if let user = api.currentUser`, so a logged-out
+// caller can never reach it.
+
 struct ProfileView: View {
-    @EnvironmentObject var api:   APIService
-    @EnvironmentObject var saved: SavedStore
-    @State private var authSheet: AuthView.Mode? = nil
-    @AppStorage("appColorScheme") private var schemePref: String = "system"
-    @State private var showSubscription = false
+    @EnvironmentObject var api: APIService
 
     var body: some View {
-        NavigationStack {
-            if let user = api.currentUser {
-                loggedInView(user)
-            } else {
-                guestView
-            }
-        }
-    }
-
-    // MARK: - Logged In
-    private func loggedInView(_ user: User) -> some View {
-        List {
-            // Avatar header
-            Section {
-                HStack(spacing: 16) {
-                    AvatarView(user: user, size: 64, editable: true)
-                        .environmentObject(api)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(user.name)
-                            .font(.title3).bold()
-                        Text(user.email)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if user.isConstructora {
-                            Label("Constructora", systemImage: "hammer.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
-                        } else if user.isInmobiliaria {
-                            Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
-                        } else if user.isAgency {
-                            Label("Agente / Broker", systemImage: "person.badge.key.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color.rdBlue)
-                        } else {
-                            Label("Cliente", systemImage: "person.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color.rdGreen)
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
-            }
-
-            // ── Editable profile info (phone, jobTitle, bio) ──
-            // Mirrors the web's /mi-cuenta#perfil page. Without this iOS
-            // users could only update these fields at registration.
-            Section("Mi información") {
-                NavigationLink {
-                    EditProfileView().environmentObject(api)
-                } label: {
-                    Label("Editar perfil", systemImage: "person.text.rectangle")
-                }
-                // Inmobiliaria/constructora owners can also edit the
-                // public agency profile (mirrors /equipo-empresa.html).
-                if user.isInmobiliaria {
-                    NavigationLink {
-                        EditInmobiliariaProfileView().environmentObject(api)
-                    } label: {
-                        Label("Perfil de empresa", systemImage: "building.2.crop.circle.fill")
-                    }
-                }
-            }
-
-            // ── Subscription ──
-            Section("Plan") {
-                Button {
-                    showSubscription = true
-                } label: {
-                    HStack {
-                        Label("Suscripción", systemImage: "crown.fill")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if user.isAgency {
-                            Text(subscriptionLabel(user))
-                                .font(.caption).bold()
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(subscriptionColor(user))
-                                .clipShape(Capsule())
-                        } else {
-                            Text("Gratis")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .sheet(isPresented: $showSubscription) {
-                    PlansView().environmentObject(api)
-                }
-            }
-
-            // ── Security & Account ──
-            Section("Seguridad") {
-                NavigationLink {
-                    ChangePasswordView().environmentObject(api)
-                } label: {
-                    Label("Cambiar contraseña", systemImage: "lock.fill")
-                }
-                NavigationLink {
-                    TwoFactorSettingsView().environmentObject(api)
-                } label: {
-                    HStack {
-                        Label("Verificación en dos pasos", systemImage: "shield.lefthalf.filled.badge.checkmark")
-                        Spacer()
-                        Text(api.currentUser?.twoFAEnabled == true ? "Activado" : "Desactivado")
-                            .font(.caption)
-                            .foregroundStyle(api.currentUser?.twoFAEnabled == true ? .green : .secondary)
-                    }
-                }
-            }
-
-            Section("Privacidad") {
-                NavigationLink {
-                    PrivacySettingsView()
-                } label: {
-                    Label("Privacidad y datos", systemImage: "hand.raised.fill")
-                }
-                NavigationLink {
-                    BlockedUsersView()
-                } label: {
-                    Label("Usuarios bloqueados", systemImage: "hand.raised.slash")
-                }
-            }
-
-            // Note: Favorites, Messages, Applications, Appearance, Support, and Logout
-            // are all accessible from ProfileTabView (the parent). This view focuses
-            // on security and privacy settings only.
-        }
-        .navigationTitle("Mi Perfil")
-    }
-
-    // MARK: - Guest
-    private var guestView: some View {
-        VStack(spacing: 28) {
-            Spacer()
-
-            ZStack {
-                Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 120, height: 120)
-                Image(systemName: "person.circle")
-                    .font(.system(size: 56))
-                    .foregroundStyle(Color.rdBlue)
-            }
-
-            VStack(spacing: 10) {
-                Text("Bienvenido a HogaresRD")
-                    .font(.title2).bold()
-                Text("Inicia sesión para guardar propiedades,\nrecibir actualizaciones y más.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            VStack(spacing: 12) {
-                Button {
-                    authSheet = .welcome
-                } label: {
-                    Text("Iniciar sesión")
-                        .font(.headline)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                if let user = api.currentUser {
+                    sections(for: user)
+                        .padding(.horizontal, 20)
+                } else {
+                    // Theoretical fallback — shouldn't be reachable in
+                    // normal navigation but kept so a misuse doesn't
+                    // surface a blank screen.
+                    Text("Inicia sesión para ver tu cuenta.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.rdBlue)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-
-                Button {
-                    authSheet = .pickRole
-                } label: {
-                    Text("Crear cuenta gratis")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.rdRed.opacity(0.1))
-                        .foregroundStyle(Color.rdRed)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.rdRed.opacity(0.3), lineWidth: 1.5)
-                        )
+                        .padding(.top, 40)
                 }
             }
-            .padding(.horizontal, 32)
-
-            Spacer()
+            .padding(.top, 12)
+            .padding(.bottom, 24)
         }
-        .sheet(item: $authSheet) { mode in
-            AuthView(initialMode: mode)
-                .environmentObject(api)
-                .id(mode) // Force SwiftUI to recreate the view (not reuse stale @State)
-        }
-        .navigationTitle("Perfil")
+        .background(ProfileBackdrop())
+        .navigationTitle("Cuenta y seguridad")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func subscriptionLabel(_ user: User) -> String {
-        switch user.role {
-        case "broker", "agency": return "Broker"
-        case "inmobiliaria": return "Inmobiliaria"
-        case "constructora": return "Constructora"
-        default: return "Activo"
+    @ViewBuilder
+    private func sections(for user: User) -> some View {
+        // ── Mi información ─────────────────────────────────────
+        // Mirrors the web's /mi-cuenta#perfil — phone, job title, bio.
+        // Inmobiliaria / constructora owners also see the public
+        // agency profile editor.
+        ProfileSectionCard(title: "Mi información") {
+            ProfileNavRow(
+                icon: "person.text.rectangle.fill",
+                iconAccent: Color.rdAccent,
+                label: "Editar perfil",
+                sub: "Teléfono, descripción profesional, biografía"
+            ) { EditProfileView() }
+            if user.isInmobiliaria {
+                Divider().padding(.leading, 64)
+                ProfileNavRow(
+                    icon: "building.2.crop.circle.fill",
+                    iconAccent: Color.rdTeal,
+                    label: "Perfil de empresa",
+                    sub: "Datos públicos de tu inmobiliaria"
+                ) { EditInmobiliariaProfileView() }
+            }
         }
-    }
 
-    private func subscriptionColor(_ user: User) -> Color {
-        switch user.role {
-        case "broker", "agency": return Color(red: 0.16, green: 0.65, blue: 0.45)
-        case "inmobiliaria": return Color(red: 0.55, green: 0.27, blue: 0.68)
-        case "constructora": return Color(red: 0.7, green: 0.35, blue: 0.04)
-        default: return .blue
+        // ── Seguridad ──────────────────────────────────────────
+        ProfileSectionCard(title: "Seguridad") {
+            ProfileNavRow(
+                icon: "lock.fill",
+                label: "Cambiar contraseña",
+                sub: nil
+            ) { ChangePasswordView() }
+            Divider().padding(.leading, 64)
+            ProfileNavRow(
+                icon: "shield.lefthalf.filled.badge.checkmark",
+                iconAccent: Color.rdGreen,
+                label: "Verificación en dos pasos",
+                sub: user.twoFAEnabled == true ? "Activada" : "Desactivada"
+            ) { TwoFactorSettingsView() }
+        }
+
+        // ── Privacidad ─────────────────────────────────────────
+        ProfileSectionCard(title: "Privacidad") {
+            ProfileNavRow(
+                icon: "hand.raised.fill",
+                label: "Privacidad y datos",
+                sub: "Visibilidad, descarga, eliminación"
+            ) { PrivacySettingsView() }
+            Divider().padding(.leading, 64)
+            ProfileNavRow(
+                icon: "hand.raised.slash",
+                label: "Usuarios bloqueados",
+                sub: nil
+            ) { BlockedUsersView() }
         }
     }
 }

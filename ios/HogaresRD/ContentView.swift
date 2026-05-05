@@ -745,29 +745,10 @@ struct ProfileTabView: View {
     }
 
     // ── Backdrop ────────────────────────────────────────────────
-    // Soft warm cream gradient with a subtle gold + terracotta wash
-    // at the top — matches the design's "ellipse 80% 30% at 50% 0%"
-    // radial accents.
-    private var profileBackdrop: some View {
-        ZStack {
-            Color.rdCream.ignoresSafeArea()
-            VStack(spacing: 0) {
-                LinearGradient(
-                    colors: [
-                        Color.rdGold.opacity(0.18),
-                        Color.rdAccent.opacity(0.10),
-                        Color.clear,
-                    ],
-                    startPoint: .top,
-                    endPoint:   .bottom
-                )
-                .frame(height: 220)
-                .blur(radius: 60)
-                Spacer()
-            }
-            .ignoresSafeArea()
-        }
-    }
+    // Backdrop is a separate component (ProfileBackdrop) so detail
+    // screens reachable from the tab — Cuenta y seguridad, etc. —
+    // can apply the same wash and feel like one continuous flow.
+    private var profileBackdrop: some View { ProfileBackdrop() }
 
     // ── Logged-in sections ──────────────────────────────────────
     @ViewBuilder
@@ -1259,12 +1240,42 @@ private struct ProfileHeroCard: View {
     }
 }
 
+// MARK: - Profile Backdrop
+//
+// Soft warm cream gradient with a subtle gold + terracotta wash at
+// the top — matches the iOS profile design's "ellipse 80% 30% at
+// 50% 0%" radial accents. Reused by ProfileTabView's tab and by
+// the Cuenta y seguridad detail screen so the cream feels continuous.
+
+struct ProfileBackdrop: View {
+    var body: some View {
+        ZStack {
+            Color.rdCream.ignoresSafeArea()
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [
+                        Color.rdGold.opacity(0.18),
+                        Color.rdAccent.opacity(0.10),
+                        Color.clear,
+                    ],
+                    startPoint: .top,
+                    endPoint:   .bottom
+                )
+                .frame(height: 220)
+                .blur(radius: 60)
+                Spacer()
+            }
+            .ignoresSafeArea()
+        }
+    }
+}
+
 // MARK: - Profile Section Card
 //
 // Wraps a stack of rows in a rounded card, with an optional uppercase
 // eyebrow above. Mirrors the design's section-list pattern.
 
-private struct ProfileSectionCard<Content: View>: View {
+struct ProfileSectionCard<Content: View>: View {
     let title: String?
     @ViewBuilder var content: Content
 
@@ -1300,7 +1311,7 @@ private struct ProfileSectionCard<Content: View>: View {
 // icon tile, label + optional subtitle, and an optional chevron.
 // Used as the `label:` for NavigationLink, Button, and Link.
 
-private struct ProfileRowLabel: View {
+struct ProfileRowLabel: View {
     let icon: String
     var iconAccent: Color = .primary
     let label: String
@@ -1352,7 +1363,7 @@ private struct ProfileRowLabel: View {
 /// the call site write `if/else` branches that resolve to
 /// `_ConditionalContent<…>` instead of bare expression statements
 /// (which produce "result is unused" warnings).
-private struct ProfileNavRow<Destination: View>: View {
+struct ProfileNavRow<Destination: View>: View {
     let icon: String
     var iconAccent: Color = .primary
     let label: String
@@ -1389,7 +1400,7 @@ private struct ProfileNavRow<Destination: View>: View {
 /// Button-style row: tapping fires `action`. Separate type from
 /// ProfileNavRow so overload resolution at the call site is
 /// unambiguous (both share the icon/label/sub prefix).
-private struct ProfileActionRow: View {
+struct ProfileActionRow: View {
     let icon: String
     var iconAccent: Color = .primary
     let label: String
@@ -1407,7 +1418,7 @@ private struct ProfileActionRow: View {
     }
 }
 
-private struct ProfileExternalRow: View {
+struct ProfileExternalRow: View {
     let icon: String
     let label: String
     let url:   URL
