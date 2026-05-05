@@ -18,52 +18,91 @@ class SavedStore: ObservableObject {
 
     @Published private(set) var savedIDs: Set<String>
 
+    /// IDs saved while the user wasn't logged in. On the next login,
+    /// `syncPendingToServer()` POSTs each one so the user's account
+    /// inherits everything they collected as a guest.
+    @Published private(set) var pendingSyncIDs: Set<String>
+
     // Soft-ask cooldown (3 days) — if user taps "Not now" we respect it
     // for this many seconds before offering again.
     static let SOFT_ASK_DISMISSED_KEY: String = "push_soft_ask_dismissed_ts"
     static let SOFT_ASK_COOLDOWN: TimeInterval = 3 * 24 * 60 * 60
 
+    // `nonisolated` so the `Sendable` closure that writes to
+    // UserDefaults from a background queue can read these without
+    // hopping back to the main actor.
+    nonisolated private static let SAVED_KEY   = "saved_listing_ids"
+    nonisolated private static let PENDING_KEY = "saved_pending_sync"
+
     private init() {
-        let arr = UserDefaults.standard.stringArray(forKey: "saved_listing_ids") ?? []
-        savedIDs = Set(arr)
+        savedIDs       = Set(UserDefaults.standard.stringArray(forKey: Self.SAVED_KEY)   ?? [])
+        pendingSyncIDs = Set(UserDefaults.standard.stringArray(forKey: Self.PENDING_KEY) ?? [])
     }
 
     func isSaved(_ id: String) -> Bool { savedIDs.contains(id) }
 
-    /// Toggle a favorite. Requires authentication — if the user isn't logged
-    /// in, posts `authRequiredForFavorite` and returns false WITHOUT touching
-    /// local or server state. Returns true when the toggle was applied.
+    /// Toggle a favorite. Always saves to local UserDefaults regardless
+    /// of login state — guests can build their favourites list and have
+    /// it merged into their account on signup/login (Phase D — loosen
+    /// the onboarding gate). Server sync runs in the background only
+    /// when the user is logged in; for guests we queue the id in
+    /// `pendingSyncIDs` and flush the queue on the next login.
     @discardableResult
     func toggle(_ id: String) -> Bool {
-        guard APIService.shared.currentUser != nil else {
-            NotificationCenter.default.post(name: .authRequiredForFavorite, object: nil)
-            return false
-        }
-        let wasAdding = !savedIDs.contains(id)
-        if wasAdding { savedIDs.insert(id) }
-        else         { savedIDs.remove(id) }
-        // Write to disk in background to avoid blocking main thread
-        let snapshot = Array(savedIDs)
-        DispatchQueue.global(qos: .utility).async {
-            UserDefaults.standard.set(snapshot, forKey: "saved_listing_ids")
+        let wasAdding  = !savedIDs.contains(id)
+        let isLoggedIn = APIService.shared.currentUser != nil
+
+        if wasAdding {
+            savedIDs.insert(id)
+            if !isLoggedIn { pendingSyncIDs.insert(id) }
+        } else {
+            savedIDs.remove(id)
+            pendingSyncIDs.remove(id)
         }
 
-        // Sync with server in background (fire-and-forget)
-        Task.detached {
-            if wasAdding {
-                try? await APIService.shared.addFavorite(listingId: id)
-            } else {
-                try? await APIService.shared.removeFavorite(listingId: id)
+        let savedSnap   = Array(savedIDs)
+        let pendingSnap = Array(pendingSyncIDs)
+        DispatchQueue.global(qos: .utility).async {
+            UserDefaults.standard.set(savedSnap,   forKey: Self.SAVED_KEY)
+            UserDefaults.standard.set(pendingSnap, forKey: Self.PENDING_KEY)
+        }
+
+        // Server sync: only fires for logged-in users. Guest favourites
+        // sit in pendingSyncIDs until login.
+        if isLoggedIn {
+            Task.detached {
+                if wasAdding {
+                    try? await APIService.shared.addFavorite(listingId: id)
+                } else {
+                    try? await APIService.shared.removeFavorite(listingId: id)
+                }
             }
         }
 
-        // Trigger contextual push permission soft ask on ADD only
+        // Soft-ask push permission on ADD (works for both guests and
+        // logged-in users — the system prompt is what matters).
         if wasAdding {
             Task { @MainActor in
                 await Self.maybeTriggerPushSoftAsk()
             }
         }
         return true
+    }
+
+    /// Push every guest-era pending favourite to the server. Called
+    /// once per login transition by ContentView when api.currentUser
+    /// goes from nil → set. Idempotent — pendingSyncIDs is cleared
+    /// after the round trip; addFavorite is also server-side
+    /// idempotent so duplicate calls are harmless.
+    func syncPendingToServer() async {
+        guard APIService.shared.currentUser != nil else { return }
+        let toSync = pendingSyncIDs
+        guard !toSync.isEmpty else { return }
+        for id in toSync {
+            try? await APIService.shared.addFavorite(listingId: id)
+        }
+        pendingSyncIDs.removeAll()
+        UserDefaults.standard.removeObject(forKey: Self.PENDING_KEY)
     }
 
     /// Check if we should show the push permission soft ask, and if so,

@@ -258,6 +258,11 @@ struct ContentView: View {
             } else {
                 Task { await refreshUnreadCount() }
                 startUnreadPolling()
+                // Phase D — merge any guest-era favourites into the
+                // freshly-logged-in account. SavedStore queues
+                // pendingSyncIDs while the user is signed out and
+                // flushes the queue here once an account exists.
+                Task { await SavedStore.shared.syncPendingToServer() }
             }
         }
         .onAppear {
