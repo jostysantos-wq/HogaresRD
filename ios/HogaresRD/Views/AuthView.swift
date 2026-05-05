@@ -607,7 +607,7 @@ struct WelcomeRegisterScreen: View {
                 }
                 .scrollIndicators(.hidden)
                 .frame(width: geo.size.width, height: geo.size.height - panelTop)
-                .background(Color.white)
+                .background(Color(.systemBackground))
                 .clipShape(
                     UnevenRoundedRectangle(
                         cornerRadii: .init(topLeading: 28, topTrailing: 28),
@@ -890,7 +890,7 @@ struct WelcomeLoginFormScreen: View {
                 }
                 .scrollIndicators(.hidden)
                 .frame(width: geo.size.width, height: geo.size.height - panelTop)
-                .background(Color.white)
+                .background(Color(.systemBackground))
                 .clipShape(
                     UnevenRoundedRectangle(
                         cornerRadii: .init(topLeading: 28, topTrailing: 28),
@@ -1404,7 +1404,7 @@ struct BrokerRegisterForm: View {
 
             BackToRoleButton(action: onBack)
 
-            RoleBadge(icon: "person.text.rectangle.fill", title: "Agente Broker", color: Color(red: 0.16, green: 0.65, blue: 0.45))
+            RoleBadge(icon: "person.text.rectangle.fill", title: "Agente Broker", color: Color.rdGreen)
 
             Text("Crea tu cuenta individual de agente. Puedes operar de forma independiente o afiliarte a una inmobiliaria desde tu dashboard.")
                 .font(.caption.bold())
@@ -1475,7 +1475,7 @@ struct BrokerRegisterForm: View {
             // Info banner
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "person.badge.plus")
-                    .foregroundStyle(Color(red: 0.16, green: 0.65, blue: 0.45))
+                    .foregroundStyle(Color.rdGreen)
                     .font(.callout)
                     .padding(.top, 1)
                 Text("Como agente broker puedes gestionar tus propias aplicaciones. Si estas afiliado a una inmobiliaria, ellos tendran visibilidad total sobre tus aplicaciones y gestionaran los planes de pago.")
@@ -1483,7 +1483,7 @@ struct BrokerRegisterForm: View {
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .background(Color(red: 0.16, green: 0.65, blue: 0.45).opacity(0.07))
+            .background(Color.rdGreen.opacity(0.07))
             .clipShape(RoundedRectangle(cornerRadius: 10))
 
             // Terms
@@ -1504,7 +1504,7 @@ struct BrokerRegisterForm: View {
 
             if let err = error { ErrorBanner(message: err) }
 
-            ActionButton(label: "Crear Cuenta de Agente Broker", color: Color(red: 0.16, green: 0.65, blue: 0.45),
+            ActionButton(label: "Crear Cuenta de Agente Broker", color: Color.rdGreen,
                          loading: loading, disabled: !canSubmit) {
                 Task { await registerBroker() }
             }
@@ -1548,7 +1548,7 @@ struct InmobiliariaRegisterForm: View {
     @State private var loading = false
     @State private var error: String?
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     init(
         onSuccess: @escaping () -> Void,
@@ -1699,7 +1699,7 @@ struct ConstructoraRegisterForm: View {
     @State private var loading = false
     @State private var error: String?
 
-    private let orangeColor = Color(red: 0.7, green: 0.35, blue: 0.04)
+    private let orangeColor = Color.rdOrange
 
     init(
         onSuccess: @escaping () -> Void,

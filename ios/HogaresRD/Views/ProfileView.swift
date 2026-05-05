@@ -542,9 +542,9 @@ struct PrivacySettingsView: View {
             Section {
                 HStack(spacing: 14) {
                     ZStack {
-                        Circle().fill(Color(red: 0.4, green: 0.1, blue: 0.6).opacity(0.1)).frame(width: 44, height: 44)
+                        Circle().fill(Color.rdPurple.opacity(0.1)).frame(width: 44, height: 44)
                         Image(systemName: "hand.raised.fill")
-                            .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+                            .foregroundStyle(Color.rdPurple)
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Privacidad y datos")
@@ -864,7 +864,7 @@ struct ConnectedApp: Identifiable {
         ConnectedApp(name: "WhatsApp Business", description: "Comunicación con clientes", icon: "message.fill", color: .green, isConnected: false),
         ConnectedApp(name: "Google Calendar", description: "Sincroniza citas y visitas", icon: "calendar", color: .blue, isConnected: false),
         ConnectedApp(name: "DocuSign", description: "Firma digital de contratos", icon: "signature", color: .orange, isConnected: false),
-        ConnectedApp(name: "Stripe", description: "Pagos y facturación", icon: "creditcard.fill", color: Color(red: 0.4, green: 0.1, blue: 0.6), isConnected: false),
+        ConnectedApp(name: "Stripe", description: "Pagos y facturación", icon: "creditcard.fill", color: Color.rdPurple, isConnected: false),
         ConnectedApp(name: "Google Drive", description: "Almacenamiento de documentos", icon: "externaldrive.fill", color: .yellow, isConnected: false)
     ]
 }

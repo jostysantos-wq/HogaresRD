@@ -200,9 +200,9 @@ struct PlanCard: View {
 
     private var planColor: Color {
         switch store.planColor(for: product.id) {
-        case "green": return Color(red: 0.16, green: 0.65, blue: 0.45)
-        case "purple": return Color(red: 0.55, green: 0.27, blue: 0.68)
-        case "orange": return Color(red: 0.7, green: 0.35, blue: 0.04)
+        case "green": return Color.rdGreen
+        case "purple": return Color.rdPurple
+        case "orange": return Color.rdOrange
         default: return .blue
         }
     }

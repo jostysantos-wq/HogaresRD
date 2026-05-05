@@ -1128,7 +1128,10 @@ private struct ProfileHeroCard: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(.systemBackground))
+                    // .secondarySystemGroupedBackground = white in light
+                    // mode and an elevated dark grey in dark mode, so the
+                    // card lifts off the cream backdrop in both schemes.
+                    .fill(Color(.secondarySystemGroupedBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -1293,7 +1296,7 @@ struct ProfileSectionCard<Content: View>: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.systemBackground))
+                    .fill(Color(.secondarySystemGroupedBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

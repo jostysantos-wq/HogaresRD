@@ -196,7 +196,7 @@ struct FeedView: View {
             }
             .padding(.horizontal, 20)
             .frame(height: 50)
-            .background(Color.white, in: Capsule())
+            .background(Color(.systemBackground), in: Capsule())
 
             Button {
                 /* filter sheet placeholder */
@@ -205,7 +205,7 @@ struct FeedView: View {
                     .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(Self.ink)
                     .frame(width: 50, height: 50)
-                    .background(Color.white, in: Circle())
+                    .background(Color(.systemBackground), in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Filtros")
@@ -434,7 +434,7 @@ struct FeaturedListingCard: View {
             }
         }
         .padding(16)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
     }
 }

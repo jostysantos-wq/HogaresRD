@@ -55,7 +55,7 @@ struct InmobiliariaDashboardView: View {
                                 }
                                 .font(.caption).bold()
                                 .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? (i >= 10 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
+                                .background(selectedTab == i ? (i >= 10 ? Color.rdPurple : Color.rdBlue) : Color(.secondarySystemFill))
                                 .foregroundStyle(selectedTab == i ? .white : .primary)
                                 .clipShape(Capsule())
                             }
@@ -164,7 +164,7 @@ struct TeamMembersTab: View {
     @State private var removingId: String?
     @State private var removeSuccess: String?
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     private var filteredBrokers: [TeamBroker] {
         guard let brokers = team?.brokers else { return [] }
@@ -359,7 +359,7 @@ struct BrokerCard: View {
     let onTap: () -> Void
     var onRemove: (() -> Void)? = nil
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     var body: some View {
         Button(action: onTap) {
@@ -498,7 +498,7 @@ struct BrokerDetailSheet: View {
     @State private var savingRole = false
     @State private var roleSaved = false
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     var body: some View {
         NavigationStack {
@@ -1010,7 +1010,7 @@ struct TeamPerformanceTab: View {
     @State private var brokers: [TeamBroker] = []
     @State private var loading = true
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     private var ranked: [TeamBroker] {
         brokers.sorted { $0.appCount > $1.appCount }
@@ -1207,7 +1207,7 @@ struct TeamSecretariesTab: View {
     @State private var secToRemove: APIService.SecretaryItem?
     @State private var showRemoveAlert = false
 
-    private let greenAccent = Color(red: 0.09, green: 0.63, blue: 0.21)
+    private let greenAccent = Color.rdGreen
 
     var body: some View {
         ScrollView {
@@ -1396,7 +1396,7 @@ struct SecretaryCard: View {
             let initials = secretary.name.split(separator: " ").prefix(2).map { String($0.prefix(1)) }.joined().uppercased()
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.09, green: 0.63, blue: 0.21))
+                    .fill(Color.rdGreen)
                     .frame(width: 40, height: 40)
                 Text(initials)
                     .font(.system(size: 14, weight: .bold))

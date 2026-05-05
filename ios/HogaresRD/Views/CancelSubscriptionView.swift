@@ -86,7 +86,7 @@ struct CancelSubscriptionView: View {
                 statCard("Propiedades", value: stats?.listings ?? 0, icon: "house.fill", color: .rdBlue)
                 statCard("Aplicaciones", value: stats?.applications ?? 0, icon: "doc.text.fill", color: .rdGreen)
                 statCard("Vistas totales", value: stats?.totalViews ?? 0, icon: "eye.fill", color: .orange)
-                statCard("Conversaciones", value: stats?.conversations ?? 0, icon: "bubble.left.fill", color: Color(red: 0.4, green: 0.1, blue: 0.6))
+                statCard("Conversaciones", value: stats?.conversations ?? 0, icon: "bubble.left.fill", color: Color.rdPurple)
             }
 
             Button {

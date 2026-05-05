@@ -84,7 +84,7 @@ struct PushPermissionPrimer: View {
                            text: "Bajadas de precio en tus favoritos")
                 featureRow(icon: "house.fill", color: .rdBlue,
                            text: "Nuevos listados que coinciden con tu busqueda")
-                featureRow(icon: "bubble.left.fill", color: Color(red: 0.4, green: 0.1, blue: 0.6),
+                featureRow(icon: "bubble.left.fill", color: Color.rdPurple,
                            text: "Mensajes de agentes")
                 featureRow(icon: "doc.text.fill", color: .orange,
                            text: "Actualizaciones de tus aplicaciones")

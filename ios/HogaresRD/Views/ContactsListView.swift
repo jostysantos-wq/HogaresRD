@@ -163,7 +163,7 @@ struct ContactsListView: View {
     }
 
     private func avatarColor(_ id: String) -> Color {
-        let colors: [Color] = [.rdBlue, .rdGreen, Color(red: 0.4, green: 0.1, blue: 0.6), Color(red: 0.7, green: 0.35, blue: 0.04), .rdRed]
+        let colors: [Color] = [.rdBlue, .rdGreen, Color.rdPurple, Color.rdOrange, .rdRed]
         return colors[abs(id.hashValue) % colors.count]
     }
 }

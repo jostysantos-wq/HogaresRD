@@ -26,7 +26,7 @@ struct SecretaryDashboardView: View {
                                 }
                                 .font(.caption).bold()
                                 .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? Color(red: 0.18, green: 0.55, blue: 0.34) : Color(.secondarySystemFill))
+                                .background(selectedTab == i ? Color.rdGreen : Color(.secondarySystemFill))
                                 .foregroundStyle(selectedTab == i ? .white : .primary)
                                 .clipShape(Capsule())
                             }

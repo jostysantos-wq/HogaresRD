@@ -1144,7 +1144,7 @@ struct BrowseView: View {
                     .foregroundColor(.rdBlue)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
-                    .background(Color.white)
+                    .background(Color(.systemBackground))
                     .clipShape(Capsule())
             }
         }

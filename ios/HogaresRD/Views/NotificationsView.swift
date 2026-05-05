@@ -349,7 +349,7 @@ struct ProfileMenuView: View {
                             if user.isInmobiliaria {
                                 Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
                                     .font(.caption2).bold()
-                                    .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+                                    .foregroundStyle(Color.rdPurple)
                             } else if user.isAgency {
                                 Label("Agente / Broker", systemImage: "person.badge.key.fill")
                                     .font(.caption2).bold()
@@ -677,7 +677,7 @@ struct NotificationSettingsView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(Color(.secondarySystemGroupedBackground))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -897,27 +897,136 @@ struct NotificationSettingsView: View {
 struct AppSettingsView: View {
     @AppStorage("appColorScheme") private var schemePref: String = "system"
 
+    fileprivate struct ThemeOption: Identifiable {
+        let tag: String
+        let label: String
+        let sub: String
+        let icon: String
+        let accent: Color
+        var id: String { tag }
+    }
+
+    private let options: [ThemeOption] = [
+        .init(tag: "system", label: "Sistema",
+              sub: "Sigue el ajuste de tu iPhone",
+              icon: "circle.lefthalf.filled", accent: Color.rdAccent),
+        .init(tag: "light",  label: "Claro",
+              sub: "Fondo cremoso y tipografía oscura",
+              icon: "sun.max.fill",          accent: Color.rdGold),
+        .init(tag: "dark",   label: "Oscuro",
+              sub: "Fondo profundo, contraste reducido",
+              icon: "moon.fill",             accent: Color.rdBlue),
+    ]
+
+    private var versionString: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    private var buildString: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+    }
+
     var body: some View {
-        List {
-            Section("Apariencia") {
-                Picker(selection: $schemePref) {
-                    Label("Sistema", systemImage: "circle.lefthalf.filled").tag("system")
-                    Label("Claro",   systemImage: "sun.max.fill").tag("light")
-                    Label("Oscuro",  systemImage: "moon.fill").tag("dark")
-                } label: {
-                    Label("Tema", systemImage: "paintbrush.fill")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                ProfileSectionCard(title: "Apariencia") {
+                    ForEach(Array(options.enumerated()), id: \.element.tag) { idx, opt in
+                        ThemeOptionRow(
+                            option: opt,
+                            isSelected: schemePref == opt.tag
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                schemePref = opt.tag
+                            }
+                        }
+                        if idx < options.count - 1 {
+                            Divider().padding(.leading, 64)
+                        }
+                    }
                 }
-                .pickerStyle(.menu)
-            }
-            Section("Sobre") {
-                HStack {
-                    Text("Versión")
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0").foregroundStyle(.secondary)
+
+                ProfileSectionCard(title: "Sobre") {
+                    aboutRow(label: "Versión",    value: versionString)
+                    Divider().padding(.leading, 64)
+                    aboutRow(label: "Build",      value: buildString)
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 24)
         }
-        .navigationTitle("App")
+        .background(ProfileBackdrop())
+        .navigationTitle("Apariencia")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func aboutRow(label: String, value: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.rdCreamDeep)
+                    .frame(width: 36, height: 36)
+                Image(systemName: label == "Versión" ? "app.badge.fill" : "hammer.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            Text(label)
+                .font(.system(size: 14.5, weight: .semibold))
+            Spacer()
+            Text(value)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+    }
+}
+
+/// Single theme choice row inside the Apariencia section card.
+/// Tapping anywhere on the row sets it as the active choice; the
+/// trailing checkmark and the colored icon-tile signal the selection.
+private struct ThemeOptionRow: View {
+    let option: AppSettingsView.ThemeOption
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isSelected ? option.accent.opacity(0.18) : Color.rdCreamDeep)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: option.icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(isSelected ? option.accent : .secondary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(option.label)
+                        .font(.system(size: 14.5, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(option.sub)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(option.accent)
+                } else {
+                    Circle()
+                        .strokeBorder(Color.black.opacity(0.12), lineWidth: 1.5)
+                        .frame(width: 18, height: 18)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

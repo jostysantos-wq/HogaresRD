@@ -14,7 +14,7 @@ struct HomeView: View {
     private let types = [("venta", "Comprar"), ("alquiler", "Alquilar"), ("proyecto", "Proyectos")]
     private let agencyColors: [Color] = [Color.rdBlue, Color.rdRed, Color.rdGreen,
                                           Color(red: 0.55, green: 0.27, blue: 0.07),
-                                          Color(red: 0.4, green: 0.1, blue: 0.6)]
+                                          Color.rdPurple]
 
     var body: some View {
         NavigationStack {
