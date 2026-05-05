@@ -19,6 +19,7 @@ struct DashboardHomeView: View {
     @State private var sales: DashboardSales?
     @State private var tours: [TourRequest] = []
     @State private var conversations: [Conversation] = []
+    @State private var applications: [Application] = []
     @State private var loading = true
 
     private var greeting: String {
@@ -63,10 +64,15 @@ struct DashboardHomeView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
+                    // Phase B: Inicio reduces to 5 sections with one
+                    // primary anchor (Hoy = the user's actionable list).
+                    // The donut + dedicated pipeline section moved out;
+                    // a slim chip row replaces it for drill-in. Heavy
+                    // analytics live in the Analiticas tab now.
                     greetingHeader
                     todayCard
                     kpiSection
-                    pipelineSection
+                    pipelineStrip            // compact chips, no donut
                     if showLeaderboard && !teamMembers.isEmpty {
                         leaderboardSection
                     }
@@ -93,11 +99,17 @@ struct DashboardHomeView: View {
         async let s = showSalesMetrics ? (try? api.getDashboardSales()) : nil
         async let t = try? api.fetchBrokerTourRequests()
         async let c = try? api.getConversations(archived: false)
+        // Applications power the activity-feed parity. The endpoint
+        // 403s for plain clients, so we only request it for agency
+        // roles. nil-default keeps the fallback path empty.
+        let isAgency = api.currentUser?.isAgency == true
+        async let apps: [Application]? = isAgency ? (try? await api.getApplications()) : nil
 
         analytics = await a
         sales = await s
         tours = await t ?? []
         conversations = await c ?? []
+        applications = await apps ?? []
         loading = false
     }
 
@@ -129,9 +141,65 @@ struct DashboardHomeView: View {
     }
 
     // MARK: - Today's Priorities
+    //
+    // The anchor of the screen — capped at 3 visible rows so the user
+    // sees the "next thing to do" without scanning. If there are
+    // more priorities, a "Ver N más" footer routes to the catch-all
+    // applications tab. Order is by urgency: docs → apps in review
+    // → tours today → unread messages.
+
+    private struct TodayItem {
+        let icon: String
+        let color: Color
+        let label: String
+        let onTap: () -> Void
+    }
+
+    private var todayItems: [TodayItem] {
+        var items: [TodayItem] = []
+        if pendingDocs > 0 {
+            items.append(.init(
+                icon: "exclamationmark.triangle.fill",
+                color: Color.rdRed,
+                label: "\(pendingDocs) documentos pendientes",
+                onTap: { onTapTab(4) }
+            ))
+        }
+        if pendingApps > 0 {
+            items.append(.init(
+                icon: "doc.text.fill",
+                color: .orange,
+                label: "\(pendingApps) aplicaciones en revisión",
+                onTap: { onTapTab(0) }
+            ))
+        }
+        if !todaysTours.isEmpty {
+            let next = todaysTours.first
+            items.append(.init(
+                icon: "calendar.badge.clock",
+                color: Color.rdGreen,
+                label: "\(todaysTours.count) visita\(todaysTours.count > 1 ? "s" : "") hoy"
+                     + (next != nil ? " · \(formatTime(next!.requested_time))" : ""),
+                onTap: { onTapTours() }
+            ))
+        }
+        if unreadMessages > 0 {
+            items.append(.init(
+                icon: "bubble.left.fill",
+                color: Color.rdBlue,
+                label: "\(unreadMessages) mensajes sin leer",
+                onTap: { onTapMessages() }
+            ))
+        }
+        return items
+    }
 
     private var todayCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let items = todayItems
+        let visible = items.prefix(3)
+        let overflow = max(0, items.count - 3)
+
+        return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Label("Hoy", systemImage: "star.fill")
                     .font(.subheadline.bold())
@@ -142,37 +210,39 @@ struct DashboardHomeView: View {
 
             Divider()
 
-            VStack(spacing: 0) {
-                if pendingApps > 0 {
-                    todayRow(icon: "doc.text.fill", iconColor: .orange, label: "\(pendingApps) aplicaciones en revision") {
-                        onTapTab(0)
-                    }
+            if items.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.rdGreen)
+                    Text("Todo al día. Sin tareas pendientes.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
                 }
-                if unreadMessages > 0 {
-                    todayRow(icon: "bubble.left.fill", iconColor: Color.rdBlue, label: "\(unreadMessages) mensajes sin leer") {
-                        onTapMessages()
+                .padding(14)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(visible.enumerated()), id: \.offset) { idx, item in
+                        todayRow(icon: item.icon, iconColor: item.color,
+                                 label: item.label, action: item.onTap)
+                        if idx < visible.count - 1 || overflow > 0 {
+                            Divider().padding(.leading, 56)
+                        }
                     }
-                }
-                if !todaysTours.isEmpty {
-                    let next = todaysTours.first
-                    todayRow(icon: "calendar.badge.clock", iconColor: Color.rdGreen,
-                             label: "\(todaysTours.count) visita\(todaysTours.count > 1 ? "s" : "") hoy" + (next != nil ? " · \(formatTime(next!.requested_time))" : "")) {
-                        onTapTours()
+                    if overflow > 0 {
+                        Button { onTapTab(0) } label: {
+                            HStack {
+                                Spacer()
+                                Text("Ver \(overflow) más")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.rdBlue)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(Color.rdBlue)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
                     }
-                }
-                if pendingDocs > 0 {
-                    todayRow(icon: "exclamationmark.triangle.fill", iconColor: Color.rdRed, label: "\(pendingDocs) documentos pendientes") {
-                        onTapTab(4)
-                    }
-                }
-                if pendingApps == 0 && unreadMessages == 0 && todaysTours.isEmpty && pendingDocs == 0 {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.rdGreen)
-                        Text("Todo al dia. Sin tareas pendientes.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    .padding(14)
                 }
             }
         }
@@ -204,10 +274,32 @@ struct DashboardHomeView: View {
     // MARK: - KPI Metrics
 
     private var kpiSection: some View {
+        // Three KPIs only — Aplicaciones / Tasa Conversión / Ingresos
+        // (or Días Prom. Cierre if sales metrics are off). Días moved
+        // out of the default set because it's a slow-moving metric
+        // that doesn't reward daily checking. Heavy charts live in
+        // the Analiticas tab. "Ver análisis →" routes there.
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("Métricas", systemImage: "chart.bar.fill")
+            HStack {
+                sectionTitle("Resumen", systemImage: "chart.bar.fill")
+                Button {
+                    onTapTab(3)        // Analiticas tab
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("Análisis")
+                        Image(systemName: "chevron.right").font(.caption2.bold())
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.rdBlue)
+                }
+                .buttonStyle(.plain)
+            }
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            let cols = showSalesMetrics
+                ? Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+                : [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+
+            LazyVGrid(columns: cols, spacing: 10) {
                 KPICard(
                     icon: "doc.text.fill",
                     label: "Aplicaciones",
@@ -219,7 +311,7 @@ struct DashboardHomeView: View {
                 )
                 KPICard(
                     icon: "arrow.triangle.2.circlepath",
-                    label: "Tasa Conversión",
+                    label: "Conversión",
                     value: String(format: "%.1f%%", (analytics?.conversionRate ?? 0) * 100),
                     delta: nil,
                     deltaPositive: true,
@@ -236,16 +328,17 @@ struct DashboardHomeView: View {
                         footnote: "ventas",
                         color: Color.rdGreen
                     )
+                } else {
+                    KPICard(
+                        icon: "clock.fill",
+                        label: "Días Cierre",
+                        value: String(format: "%.0f", analytics?.avgDaysToClose ?? 0),
+                        delta: nil,
+                        deltaPositive: false,
+                        footnote: "promedio",
+                        color: Color.rdPurple
+                    )
                 }
-                KPICard(
-                    icon: "clock.fill",
-                    label: "Días Prom. Cierre",
-                    value: String(format: "%.0f", analytics?.avgDaysToClose ?? 0),
-                    delta: nil,
-                    deltaPositive: false,
-                    footnote: "días",
-                    color: .purple
-                )
             }
         }
     }
@@ -269,51 +362,14 @@ struct DashboardHomeView: View {
         ]
     }
 
-    private var pipelineSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    /// Slim pipeline drill-in. Replaces the previous donut + chip
+    /// sections — the donut moved into the Analiticas tab where it
+    /// has dedicated screen real estate. Here on Inicio we keep
+    /// only the chip row so users can still jump into a filtered
+    /// applications tab in one tap.
+    private var pipelineStrip: some View {
+        VStack(alignment: .leading, spacing: 10) {
             sectionTitle("Pipeline", systemImage: "arrow.right.arrow.left")
-
-            // Donut summary card — total leads in the center, segments
-            // sized by stage. Mirrors the web's lead-funnel donut.
-            VStack(alignment: .leading, spacing: 14) {
-                let total = pipelineStages.reduce(0) { $0 + $1.count }
-                HStack(spacing: 18) {
-                    ZStack {
-                        DonutChart(
-                            segments: pipelineStages.map { .init(value: $0.count, color: $0.color) },
-                            lineWidth: 16
-                        )
-                        .frame(width: 108, height: 108)
-
-                        VStack(spacing: 0) {
-                            Text("\(total)")
-                                .font(.title3.bold())
-                            Text("aplicaciones")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(pipelineStages, id: \.status) { stage in
-                            HStack(spacing: 8) {
-                                Circle().fill(stage.color).frame(width: 8, height: 8)
-                                Text(stage.label)
-                                    .font(.caption)
-                                Spacer()
-                                Text("\(stage.count)")
-                                    .font(.caption.bold())
-                            }
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-            .padding(14)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
-
-            // Tap-to-filter chips — quick affordance to jump straight
-            // into the Aplicaciones tab pre-filtered by status.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(pipelineStages, id: \.status) { stage in
@@ -432,53 +488,45 @@ struct DashboardHomeView: View {
     }
 
     private func activityRow(_ item: HomeActivityItem) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle().fill(item.iconColor.opacity(0.13)).frame(width: 34, height: 34)
-                if let initials = item.avatarInitials, !initials.isEmpty {
-                    Text(initials)
-                        .font(.system(size: 11, weight: .heavy))
-                        .foregroundStyle(item.iconColor)
-                } else {
-                    Image(systemName: item.icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(item.iconColor)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .font(.caption.bold())
-                    .lineLimit(2)
-                Text(item.subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                if !item.actions.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(item.actions) { action in
-                            Button(action: action.action) {
-                                Label(action.label, systemImage: action.icon)
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(action.color)
-                                    .padding(.horizontal, 8).padding(.vertical, 4)
-                                    .background(action.color.opacity(0.1), in: Capsule())
-                            }
-                            .buttonStyle(.plain)
-                        }
+        // Rows are now informational only — taps route to the relevant
+        // detail surface via item.onTap. Inline action pills were
+        // removed: they cluttered the feed and forced the user to
+        // make decisions without context. The detail screen carries
+        // the same actions with full state.
+        Button(action: item.onTap ?? {}) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle().fill(item.iconColor.opacity(0.13)).frame(width: 34, height: 34)
+                    if let initials = item.avatarInitials, !initials.isEmpty {
+                        Text(initials)
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundStyle(item.iconColor)
+                    } else {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(item.iconColor)
                     }
-                    .padding(.top, 2)
                 }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title)
+                        .font(.caption.bold())
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                    Text(item.subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(item.timeAgo)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
             }
-
-            Spacer()
-
-            Text(item.timeAgo)
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12).padding(.vertical, 10)
+        .buttonStyle(.plain)
     }
 
     // MARK: - Build Activity Items
@@ -486,7 +534,7 @@ struct DashboardHomeView: View {
     private func buildActivityItems() -> [HomeActivityItem] {
         var items: [HomeActivityItem] = []
 
-        // Tours
+        // ── Tours ──────────────────────────────────────────────
         for tour in tours.prefix(5) {
             let date = parseDate(tour.created_at) ?? Date.distantPast
             items.append(HomeActivityItem(
@@ -496,16 +544,12 @@ struct DashboardHomeView: View {
                 title: "\(tour.client_name) solicitó visita",
                 subtitle: "\(tour.listing_title) · \(tour.requested_date) \(formatTime(tour.requested_time))",
                 time: date,
-                actions: tour.status == "pending" ? [
-                    HomeQuickAction(label: "Confirmar", icon: "checkmark", color: Color.rdGreen) {
-                        Task { try? await api.updateTourStatus(tourId: tour.id, status: "confirmed") }
-                    },
-                ] : [],
+                onTap: { onTapTours() },
                 avatarInitials: initials(tour.client_name)
             ))
         }
 
-        // Conversations with unread
+        // ── Conversations with unread ─────────────────────────
         let myId = api.currentUser?.id ?? ""
         for conv in conversations.prefix(5) {
             let isClient = conv.clientId == myId
@@ -520,17 +564,97 @@ struct DashboardHomeView: View {
                     title: "\(otherName) envió un mensaje",
                     subtitle: conv.propertyTitle + (conv.lastMessage.map { " · \($0.prefix(40))" } ?? ""),
                     time: date,
-                    actions: [
-                        HomeQuickAction(label: "Responder", icon: "arrowshape.turn.up.left.fill", color: Color.rdBlue) {
-                            onTapMessages()
-                        },
-                    ],
+                    onTap: { onTapMessages() },
                     avatarInitials: initials(otherName)
                 ))
             }
         }
 
+        // ── Applications (Phase B parity) ─────────────────────
+        // Surfaces new submissions, doc-pending state, and recent
+        // status changes. Same stream the broker monitors all day —
+        // no longer asymmetric with tours + messages.
+        for app in applications.prefix(8) {
+            let date = parseDate(app.updatedAt) ?? parseDate(app.createdAt) ?? Date.distantPast
+            let style = applicationStyle(app.status)
+            items.append(HomeActivityItem(
+                id: "app_\(app.id)",
+                icon: style.icon,
+                iconColor: style.color,
+                title: style.title(for: app),
+                subtitle: app.listingTitle + (app.listingCity.map { " · \($0)" } ?? ""),
+                time: date,
+                onTap: { onTapTab(0) },   // Aplicaciones tab
+                avatarInitials: nil
+            ))
+        }
+
         return items.sorted { $0.time > $1.time }
+    }
+
+    private struct AppStyle {
+        let icon: String
+        let color: Color
+        let titleBuilder: (Application) -> String
+        func title(for app: Application) -> String { titleBuilder(app) }
+    }
+
+    /// Map the application status to the visual + copy used in the
+    /// activity feed row. New / docs-pending get attention-grabbing
+    /// tints (orange / red) so the row pops in the stream; resolved
+    /// states (approved / rejected / closed) read as informational
+    /// in green / red / purple.
+    private func applicationStyle(_ status: String) -> AppStyle {
+        switch status {
+        case "aplicado":
+            return AppStyle(
+                icon: "doc.badge.plus",
+                color: Color.rdBlue,
+                titleBuilder: { _ in "Nueva aplicación" }
+            )
+        case "en_revision":
+            return AppStyle(
+                icon: "doc.text.magnifyingglass",
+                color: .orange,
+                titleBuilder: { _ in "Aplicación en revisión" }
+            )
+        case "documentos_requeridos", "documentos_insuficientes":
+            return AppStyle(
+                icon: "exclamationmark.triangle.fill",
+                color: Color.rdRed,
+                titleBuilder: { _ in "Documentos pendientes" }
+            )
+        case "documentos_enviados":
+            return AppStyle(
+                icon: "arrow.up.doc.fill",
+                color: .orange,
+                titleBuilder: { _ in "Documentos recibidos" }
+            )
+        case "aprobado", "aprobada":
+            return AppStyle(
+                icon: "checkmark.seal.fill",
+                color: Color.rdGreen,
+                titleBuilder: { _ in "Aplicación aprobada" }
+            )
+        case "rechazado", "rechazada":
+            return AppStyle(
+                icon: "xmark.seal.fill",
+                color: Color.rdRed,
+                titleBuilder: { _ in "Aplicación rechazada" }
+            )
+        case "completado", "cerrada", "completada":
+            return AppStyle(
+                icon: "checkmark.circle.fill",
+                color: Color.rdPurple,
+                titleBuilder: { _ in "Aplicación cerrada" }
+            )
+        default:
+            return AppStyle(
+                icon: "doc.text.fill",
+                color: .secondary,
+                titleBuilder: { _ in "Actualización de aplicación" }
+            )
+        }
     }
 
     // MARK: - Helpers
@@ -651,7 +775,10 @@ struct HomeActivityItem: Identifiable {
     let title: String
     let subtitle: String
     let time: Date
-    let actions: [HomeQuickAction]
+    /// Optional tap-into. Most items push to the relevant detail (a
+    /// conversation, an application). Phase B replaces inline pill
+    /// buttons with whole-row taps so the feed reads cleanly.
+    var onTap: (() -> Void)? = nil
     /// When non-nil, the avatar circle shows these initials instead of
     /// the SF Symbol icon. Used for activity items that are tied to a
     /// specific person (clients, agents) so the feed reads more like
@@ -667,13 +794,10 @@ struct HomeActivityItem: Identifiable {
     }
 }
 
-struct HomeQuickAction: Identifiable {
-    let id = UUID()
-    let label: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
-}
+// HomeQuickAction was removed in Phase B — activity feed rows are
+// now informational, with whole-row taps routing to the relevant
+// detail screen instead of inline pill buttons. Detail screens
+// carry the same actions with full state context.
 
 // MARK: - DateFormatter Extension
 
