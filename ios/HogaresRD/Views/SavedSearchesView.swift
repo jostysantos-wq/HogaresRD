@@ -16,38 +16,28 @@ struct SavedSearchesView: View {
             if loading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = errorMsg, searches.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40)).foregroundStyle(.secondary)
-                    Text(err).multilineTextAlignment(.center).foregroundStyle(.secondary)
+                ContentUnavailableView {
+                    Label("No se pudo cargar", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(err)
+                } actions: {
                     Button("Reintentar") { Task { await load() } }
                         .buttonStyle(.borderedProminent).tint(Color.rdBlue)
                 }
-                .padding()
             } else if searches.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "bell.badge")
-                        .font(.system(size: 60))
-                        .foregroundStyle(Color.rdBlue.opacity(0.35))
-                    Text("Sin búsquedas guardadas")
-                        .font(.title3).bold()
-                    Text("Crea una búsqueda guardada para recibir alertas cuando aparezcan nuevas propiedades que coincidan con tus criterios.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                EmptyState.actionable(
+                    title: "Sin búsquedas guardadas",
+                    systemImage: "bell.badge",
+                    description: "Crea una búsqueda para recibir alertas cuando aparezcan nuevas propiedades que coincidan con tus criterios."
+                ) {
                     Button {
                         showCreate = true
                     } label: {
                         Label("Crear búsqueda", systemImage: "plus.circle.fill")
-                            .font(.subheadline).bold()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.rdBlue)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .font(.subheadline.weight(.semibold))
                     }
-                    .padding(.horizontal, 32)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.rdBlue)
                 }
             } else {
                 List {
