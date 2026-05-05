@@ -97,7 +97,9 @@ struct FeedView: View {
                         }
                         .padding(.horizontal, 22)
                         .padding(.top, 12)
-                        .padding(.bottom, 120) // floating tab-bar clearance
+                        // System TabView reserves its own safe-area
+                        // inset; just give a small visual gap.
+                        .padding(.bottom, 16)
                     }
                     .refreshable { await refresh() }
                 }

@@ -577,7 +577,7 @@ struct BrowseView: View {
                 listFooter
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 80)
+            .padding(.bottom, 16)
         }
     }
 
