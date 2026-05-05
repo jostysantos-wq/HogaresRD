@@ -876,6 +876,18 @@ struct ProfileTabView: View {
                     sub: nil
                 ) { ApplicationsView() }
                 Divider().padding(.leading, 64)
+                // Cola de leads — same destination as the dashboard's
+                // top-leading tray icon. Surfaced here too because
+                // agents who live in the Profile tab shouldn't have to
+                // bounce through the dashboard for a time-sensitive
+                // queue (exclusive tier expires in 15 min).
+                ProfileNavRow(
+                    icon: "tray.full.fill",
+                    iconAccent: Color.rdAccent,
+                    label: "Cola de leads",
+                    sub: "Reclama leads asignados a tu equipo"
+                ) { LeadQueueView().environmentObject(api) }
+                Divider().padding(.leading, 64)
                 ProfileNavRow(
                     icon: "calendar.badge.clock",
                     label: "Visitas agendadas",

@@ -83,6 +83,17 @@ struct BrokerDashboardView: View {
                         .font(.title3)
                 }
             }
+            ToolbarItem(placement: .navigationBarLeading) {
+                // Cola de leads — promoted from the kebab menu so the
+                // 15-minute exclusive-tier window is always one tap
+                // away, not buried two levels deep.
+                NavigationLink {
+                    LeadQueueView().environmentObject(api)
+                } label: {
+                    Image(systemName: "tray.full.fill")
+                        .font(.title3)
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 brokerMoreMenu
             }
@@ -123,12 +134,10 @@ struct BrokerDashboardView: View {
             }
 
             // ── Workflow ──
+            // Cola de leads moved to the top-leading toolbar (it's
+            // time-sensitive — exclusive tier expires after 15 min,
+            // so buried-in-a-menu placement was a UX bug).
             Section("Trabajo") {
-                NavigationLink {
-                    LeadQueueView().environmentObject(api)
-                } label: {
-                    Label("Cola de leads", systemImage: "tray.full.fill")
-                }
                 NavigationLink {
                     TasksView().environmentObject(api)
                 } label: {
