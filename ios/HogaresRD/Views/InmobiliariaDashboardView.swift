@@ -1141,7 +1141,7 @@ struct PerformanceRow: View {
     }
 }
 
-// MARK: - Standalone Wrappers (for ProfileMenuView navigation)
+// MARK: - Standalone Wrappers (for ProfileTabView navigation)
 
 struct InmobiliariaTeamListView: View {
     @EnvironmentObject var api: APIService
