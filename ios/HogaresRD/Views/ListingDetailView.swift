@@ -1753,6 +1753,29 @@ struct ListingDetailView: View {
                 }
             }
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+
+            if reviews.count > 5 {
+                NavigationLink {
+                    AllReviewsView(reviews: reviews,
+                                   average: reviewsAverage,
+                                   count: reviewsCount)
+                } label: {
+                    HStack {
+                        Text("Ver todas (\(reviewsCount))")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(.tertiary)
+                    }
+                    .foregroundStyle(Color.rdBlue)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color(.secondarySystemGroupedBackground),
+                                in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
@@ -2142,5 +2165,91 @@ struct FullGalleryView: View {
             }
         }
         .onAppear { current = startIndex }
+    }
+}
+
+// MARK: - All Reviews (full list)
+
+struct AllReviewsView: View {
+    let reviews: [ListingReview]
+    let average: Double?
+    let count: Int
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                if let avg = average {
+                    HStack(spacing: 8) {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(Color.rdGold)
+                        Text(String(format: "%.1f", avg))
+                            .font(.title3.bold())
+                        Text("· \(count) reseña\(count == 1 ? "" : "s")")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                }
+
+                VStack(spacing: 0) {
+                    ForEach(Array(reviews.enumerated()), id: \.element.id) { idx, r in
+                        AllReviewRow(review: r)
+                        if idx < reviews.count - 1 {
+                            Divider().padding(.leading, 14)
+                        }
+                    }
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 16)
+            }
+            .padding(.vertical, 12)
+        }
+        .navigationTitle("Reseñas")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    static func formatRelative(_ iso: String) -> String? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = f.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+        guard let d = date else { return nil }
+        let r = RelativeDateTimeFormatter()
+        r.locale = Locale(identifier: "es_DO")
+        return r.localizedString(for: d, relativeTo: Date())
+    }
+}
+
+private struct AllReviewRow: View {
+    let review: ListingReview
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                HStack(spacing: 1) {
+                    ForEach(0..<5, id: \.self) { i in
+                        Image(systemName: i < review.rating ? "star.fill" : "star")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.rdGold)
+                    }
+                }
+                Text(review.reviewer_name ?? "Visitante")
+                    .font(.caption.bold())
+                Spacer()
+                if let when = review.feedback_at, let pretty = AllReviewsView.formatRelative(when) {
+                    Text(pretty)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            if !review.comment.isEmpty {
+                Text(review.comment)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
     }
 }

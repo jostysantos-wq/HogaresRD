@@ -2501,6 +2501,21 @@ class APIService: ObservableObject {
         _ = try? await session.data(for: req)
     }
 
+    /// Pull the full set of listing IDs the current user has favorited
+    /// server-side. Used on login transition to merge server-side hearts
+    /// with any local guest-era hearts.
+    func getMyFavoriteIDs() async -> [String] {
+        guard token != nil else { return [] }
+        guard let url = URL(string: "\(apiBase)/api/user/favorites") else { return [] }
+        do {
+            let req = try authedRequest(url)
+            let (data, _) = try await session.data(for: req)
+            struct FavResp: Decodable { let favorites: [Listing] }
+            let r = try? decoder.decode(FavResp.self, from: data)
+            return r?.favorites.map { $0.id } ?? []
+        } catch { return [] }
+    }
+
     /// Toggle the current user's like on a listing.
     /// Returns the fresh server-side like count on success, or nil on failure
     /// (so the caller can keep its optimistic count).

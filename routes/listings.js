@@ -181,6 +181,26 @@ router.get('/', optionalAuth, (req, res) => {
   const total = listings.length;
   const items = listings.slice((page - 1) * limit, page * limit);
 
+  // Rating aggregate snapshot — one O(M) scan over tours per request,
+  // grouped into a Map. Attached only to the paginated slice so a
+  // 1000-item index doesn't pay the per-row cost. Cards use this
+  // pre-computed pair to render "★ 4.5 (12)" without an extra fetch.
+  const tourAgg = {};
+  for (const t of store.getTours()) {
+    if (!t.feedback_rating || !t.listing_id) continue;
+    const lid = t.listing_id;
+    if (!tourAgg[lid]) tourAgg[lid] = { sum: 0, count: 0 };
+    tourAgg[lid].sum   += t.feedback_rating;
+    tourAgg[lid].count += 1;
+  }
+  for (const l of items) {
+    const a = tourAgg[l.id];
+    if (a && a.count > 0) {
+      l.rating_average = Math.round((a.sum / a.count) * 10) / 10;
+      l.rating_count   = a.count;
+    }
+  }
+
   res.json({ listings: attachFavCounts(items), total, page, limit, pages: Math.ceil(total / limit) });
 });
 
@@ -372,6 +392,16 @@ router.get('/:id', (req, res) => {
     if (listing.agency?.user_id) {
       const agentUser = store.getUserById(listing.agency.user_id);
       if (agentUser) listing.agency.avatarUrl = agentUser.avatarUrl || null;
+    }
+    // Rating aggregate from tour feedback — same shape as the list
+    // endpoint emits, so iOS Listing decoder gets identical fields
+    // whether it loaded from /api/listings or /api/listings/:id.
+    const lTours = store.getToursByListing(listing.id)
+      .filter(t => t.feedback_rating);
+    if (lTours.length > 0) {
+      const sum = lTours.reduce((s, t) => s + (t.feedback_rating || 0), 0);
+      listing.rating_average = Math.round((sum / lTours.length) * 10) / 10;
+      listing.rating_count   = lTours.length;
     }
     return res.json(listing);
   }

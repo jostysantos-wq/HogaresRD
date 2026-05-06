@@ -890,10 +890,15 @@ struct DashboardAnalyticsTab: View {
                     }
                     .padding(.horizontal)
 
-                    // Pipeline breakdown
+                    // Pipeline breakdown — donut summary above the list,
+                    // moved here from Inicio (Phase B) so the broker dashboard
+                    // has one canonical place for the visual funnel.
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Pipeline")
                             .font(.headline)
+                            .padding(.horizontal)
+
+                        pipelineDonut(a)
                             .padding(.horizontal)
 
                         VStack(spacing: 8) {
@@ -956,6 +961,52 @@ struct DashboardAnalyticsTab: View {
         }
         .task { await load() }
         .refreshable { await load() }
+    }
+
+    /// Donut summary card — total leads in the centre, segments
+    /// sized by stage. Reuses the DonutChart helper introduced in
+    /// the Tareas redesign so we don't depend on Swift Charts.
+    private func pipelineDonut(_ a: DashboardAnalytics) -> some View {
+        let segments: [DonutChart.Segment] = [
+            .init(value: a.enviadas,   color: .gray),
+            .init(value: a.enRevision, color: .orange),
+            .init(value: a.aprobadas,  color: Color.rdGreen),
+            .init(value: a.rechazadas, color: Color.rdRed),
+            .init(value: a.cerradas,   color: Color.rdBlue),
+        ]
+        let total = segments.reduce(0) { $0 + $1.value }
+        return HStack(spacing: 18) {
+            ZStack {
+                DonutChart(segments: segments, lineWidth: 16)
+                    .frame(width: 108, height: 108)
+                VStack(spacing: 0) {
+                    Text("\(total)")
+                        .font(.title3.bold())
+                    Text("aplicaciones")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                legendRow("Enviadas",  count: a.enviadas,   color: .gray)
+                legendRow("Revisión",  count: a.enRevision, color: .orange)
+                legendRow("Aprobadas", count: a.aprobadas,  color: Color.rdGreen)
+                legendRow("Rechazadas",count: a.rechazadas, color: Color.rdRed)
+                legendRow("Cerradas",  count: a.cerradas,   color: Color.rdBlue)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func legendRow(_ label: String, count: Int, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).font(.caption)
+            Spacer()
+            Text("\(count)").font(.caption.bold())
+        }
     }
 
     private func pipelineRow(_ label: String, count: Int, color: Color) -> some View {

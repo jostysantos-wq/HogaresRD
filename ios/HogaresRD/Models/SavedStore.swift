@@ -105,6 +105,20 @@ class SavedStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.PENDING_KEY)
     }
 
+    /// Pull the user's server-side favorites and merge into local state.
+    /// Called on login transition alongside `syncPendingToServer()` so
+    /// the user sees their full collection (guest hearts + existing
+    /// account hearts) without a full app reload.
+    func hydrateFromServer() async {
+        let serverIDs = await APIService.shared.getMyFavoriteIDs()
+        guard !serverIDs.isEmpty else { return }
+        savedIDs.formUnion(serverIDs)
+        let snap = Array(savedIDs)
+        DispatchQueue.global(qos: .utility).async {
+            UserDefaults.standard.set(snap, forKey: Self.SAVED_KEY)
+        }
+    }
+
     /// Check if we should show the push permission soft ask, and if so,
     /// post the notification after a short delay. Only fires when:
     /// 1. System authorization is still .notDetermined

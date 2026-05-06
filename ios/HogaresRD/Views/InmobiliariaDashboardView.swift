@@ -34,6 +34,16 @@ struct InmobiliariaDashboardView: View {
         return t
     }
 
+    /// Cartera sub-tabs gated by access level. Auditoría is level 3+
+    /// in the legacy gating; the Phase C restructure unconditionally
+    /// included it as a regression. Now matches the pre-restructure
+    /// access policy.
+    private var carteraTitles: [String] {
+        var t = ["Propiedades", "Archivo"]
+        if level >= 3 { t.append("Auditoría") }
+        return t
+    }
+
     /// Role-aware title — "Constructora" for constructora users,
     /// "Inmobiliaria" for inmobiliaria users, plain "Dashboard" otherwise.
     /// Both roles use the SAME view with IDENTICAL tabs/data.
@@ -170,12 +180,13 @@ struct InmobiliariaDashboardView: View {
             }
         case .cartera:
             VStack(spacing: 0) {
-                segmentedSubBar(sub: $carteraSub, titles: ["Propiedades", "Archivo", "Auditoría"])
+                segmentedSubBar(sub: $carteraSub, titles: carteraTitles)
                 Group {
                     switch carteraSub {
                     case 0: DashboardListingAnalyticsTab()
                     case 1: DashboardArchiveTab()
-                    default: DashboardAuditTab()
+                    case 2 where level >= 3: DashboardAuditTab()
+                    default: DashboardListingAnalyticsTab()
                     }
                 }
                 .environmentObject(api)

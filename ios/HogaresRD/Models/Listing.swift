@@ -43,6 +43,13 @@ struct Listing: Decodable, Identifiable, Equatable {
     let submittedAt:    String?
     let approvedAt:     String?
 
+    /// Aggregate rating snapshot — populated by the listings list
+    /// endpoint from completed tour feedback. Both nil when the
+    /// listing has no reviewed visits yet. Cards use these to render
+    /// a "★ 4.5 (12)" pill without an extra fetch.
+    let ratingAverage: Double?
+    let ratingCount:   Int?
+
     enum CodingKeys: String, CodingKey {
         case id, title, type, condition, description, price,
              area_const, area_land, bedrooms, bathrooms, parking,
@@ -53,6 +60,8 @@ struct Listing: Decodable, Identifiable, Equatable {
              lat, lng
         case unitInventory = "unit_inventory"
         case feedImage = "feed_image"
+        case ratingAverage = "rating_average"
+        case ratingCount   = "rating_count"
     }
 
     init(from decoder: Decoder) throws {
@@ -104,6 +113,8 @@ struct Listing: Decodable, Identifiable, Equatable {
         }
         amenities            = (try? c.decode([String].self, forKey: .amenities)) ?? []
         feedImage            = try? c.decode(String.self, forKey: .feedImage)
+        ratingAverage        = try? c.decode(Double.self, forKey: .ratingAverage)
+        ratingCount          = try? c.decode(Int.self,    forKey: .ratingCount)
     }
 
     private static let priceFormatter: NumberFormatter = {

@@ -1184,9 +1184,24 @@ struct CarouselCard: View {
 
             // Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(listing.shortPrice)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.rdBlue)
+                HStack(spacing: 6) {
+                    Text(listing.shortPrice)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.rdBlue)
+                    if let avg = listing.ratingAverage, let count = listing.ratingCount, count > 0 {
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.yellow)
+                            Text(String(format: "%.1f", avg))
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text("(\(count))")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
 
                 Text(listing.title)
                     .font(.caption)

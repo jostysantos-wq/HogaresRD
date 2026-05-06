@@ -394,6 +394,25 @@ struct ListingCard: View {
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
                     .padding(10)
+
+                if let avg = listing.ratingAverage, let count = listing.ratingCount, count > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.yellow)
+                        Text(String(format: "%.1f", avg))
+                            .font(.caption2).bold()
+                            .foregroundStyle(.white)
+                        Text("(\(count))")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .padding(.horizontal, 7).padding(.vertical, 4)
+                    .background(.black.opacity(0.55))
+                    .clipShape(Capsule())
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .topTrailing)
+                }
             }
 
             VStack(alignment: .leading, spacing: 6) {

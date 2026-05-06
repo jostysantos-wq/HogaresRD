@@ -259,10 +259,14 @@ struct ContentView: View {
                 Task { await refreshUnreadCount() }
                 startUnreadPolling()
                 // Phase D — merge any guest-era favourites into the
-                // freshly-logged-in account. SavedStore queues
-                // pendingSyncIDs while the user is signed out and
-                // flushes the queue here once an account exists.
-                Task { await SavedStore.shared.syncPendingToServer() }
+                // freshly-logged-in account. Also pull existing
+                // server-side hearts so the union is visible right away,
+                // and flush guest-era likes (LikesStore mirror).
+                Task {
+                    await SavedStore.shared.syncPendingToServer()
+                    await SavedStore.shared.hydrateFromServer()
+                    await LikesStore.shared.syncPendingToServer()
+                }
             }
         }
         .onAppear {

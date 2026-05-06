@@ -20,6 +20,9 @@ struct DashboardHomeView: View {
     @State private var tours: [TourRequest] = []
     @State private var conversations: [Conversation] = []
     @State private var applications: [Application] = []
+    @State private var todayExpanded = false
+    @State private var selectedApplicationId: String? = nil
+    @State private var pendingTourConfirm: TourRequest? = nil
     @State private var loading = true
 
     private var greeting: String {
@@ -89,6 +92,39 @@ struct DashboardHomeView: View {
             // payment review, etc.) without waiting for the user to pull.
             Task { await loadAll() }
         }
+        // Activity-feed app row tap → push the matching application
+        // detail. Without this the row's onTap dropped the user on the
+        // Aplicaciones list and made them re-find the row.
+        .sheet(item: Binding(
+            get: { selectedApplicationId.map(IdentifiedString.init) },
+            set: { selectedApplicationId = $0?.value }
+        )) { wrapper in
+            NavigationStack {
+                ApplicationDetailView(id: wrapper.value)
+                    .environmentObject(api)
+            }
+        }
+        // Long-press → confirm pending tour without leaving the dashboard.
+        .alert("Confirmar visita", isPresented: Binding(
+            get: { pendingTourConfirm != nil },
+            set: { if !$0 { pendingTourConfirm = nil } }
+        ), presenting: pendingTourConfirm) { tour in
+            Button("Confirmar") { Task { await confirmTour(tour) } }
+            Button("Cancelar", role: .cancel) { }
+        } message: { tour in
+            Text("¿Confirmar la visita de \(tour.client_name) a \(tour.listing_title)?")
+        }
+    }
+
+    /// Tiny Identifiable wrapper for sheet(item:) when binding a String.
+    private struct IdentifiedString: Identifiable {
+        let value: String
+        var id: String { value }
+    }
+
+    private func confirmTour(_ tour: TourRequest) async {
+        try? await api.updateTourStatus(tourId: tour.id, status: "confirmed")
+        await loadAll()
     }
 
     // MARK: - Data Loading
@@ -196,8 +232,14 @@ struct DashboardHomeView: View {
 
     private var todayCard: some View {
         let items = todayItems
-        let visible = items.prefix(3)
+        // Show 3 by default; expand in place when the user taps
+        // "Ver N más" so overflow priorities (each routes to a
+        // different surface) aren't dropped on a single mismatched
+        // tab landing.
+        let visible = todayExpanded ? Array(items) : Array(items.prefix(3))
         let overflow = max(0, items.count - 3)
+        let hasOverflow = overflow > 0 && !todayExpanded
+        let canCollapse = todayExpanded && items.count > 3
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -224,18 +266,20 @@ struct DashboardHomeView: View {
                     ForEach(Array(visible.enumerated()), id: \.offset) { idx, item in
                         todayRow(icon: item.icon, iconColor: item.color,
                                  label: item.label, action: item.onTap)
-                        if idx < visible.count - 1 || overflow > 0 {
+                        if idx < visible.count - 1 || hasOverflow || canCollapse {
                             Divider().padding(.leading, 56)
                         }
                     }
-                    if overflow > 0 {
-                        Button { onTapTab(0) } label: {
+                    if hasOverflow || canCollapse {
+                        Button {
+                            withAnimation(Motion.layout) { todayExpanded.toggle() }
+                        } label: {
                             HStack {
                                 Spacer()
-                                Text("Ver \(overflow) más")
+                                Text(canCollapse ? "Ver menos" : "Ver \(overflow) más")
                                     .font(.caption.bold())
                                     .foregroundStyle(Color.rdBlue)
-                                Image(systemName: "chevron.right")
+                                Image(systemName: canCollapse ? "chevron.up" : "chevron.down")
                                     .font(.caption2.bold())
                                     .foregroundStyle(Color.rdBlue)
                             }
@@ -488,11 +532,11 @@ struct DashboardHomeView: View {
     }
 
     private func activityRow(_ item: HomeActivityItem) -> some View {
-        // Rows are now informational only — taps route to the relevant
-        // detail surface via item.onTap. Inline action pills were
-        // removed: they cluttered the feed and forced the user to
-        // make decisions without context. The detail screen carries
-        // the same actions with full state.
+        // Rows tap into the right detail (application sheet, tour
+        // detail, conversation thread). High-frequency actions —
+        // notably "Confirmar visita" on a pending tour — surface via
+        // long-press contextMenu so the row stays clean while the
+        // 1-tap workflow is preserved.
         Button(action: item.onTap ?? {}) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
@@ -527,6 +571,19 @@ struct DashboardHomeView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            // Long-press → 1-tap actions for high-frequency cases.
+            // Currently only "Confirmar visita" on pending tour rows;
+            // other types (apps / messages) drill into detail where
+            // their own actions live.
+            if let tour = item.pendingTour {
+                Button {
+                    pendingTourConfirm = tour
+                } label: {
+                    Label("Confirmar visita", systemImage: "checkmark.circle")
+                }
+            }
+        }
     }
 
     // MARK: - Build Activity Items
@@ -545,7 +602,8 @@ struct DashboardHomeView: View {
                 subtitle: "\(tour.listing_title) · \(tour.requested_date) \(formatTime(tour.requested_time))",
                 time: date,
                 onTap: { onTapTours() },
-                avatarInitials: initials(tour.client_name)
+                avatarInitials: initials(tour.client_name),
+                pendingTour: tour.status == "pending" ? tour : nil
             ))
         }
 
@@ -577,6 +635,7 @@ struct DashboardHomeView: View {
         for app in applications.prefix(8) {
             let date = parseDate(app.updatedAt) ?? parseDate(app.createdAt) ?? Date.distantPast
             let style = applicationStyle(app.status)
+            let appId = app.id
             items.append(HomeActivityItem(
                 id: "app_\(app.id)",
                 icon: style.icon,
@@ -584,7 +643,11 @@ struct DashboardHomeView: View {
                 title: style.title(for: app),
                 subtitle: app.listingTitle + (app.listingCity.map { " · \($0)" } ?? ""),
                 time: date,
-                onTap: { onTapTab(0) },   // Aplicaciones tab
+                // Drill into the specific application detail, not the
+                // catch-all Aplicaciones tab. The audit called out the
+                // mismatch — users tapped a row about Casa Luna and had
+                // to find Casa Luna again on the list.
+                onTap: { selectedApplicationId = appId },
                 avatarInitials: nil
             ))
         }
@@ -784,6 +847,11 @@ struct HomeActivityItem: Identifiable {
     /// specific person (clients, agents) so the feed reads more like
     /// the web's activity timeline.
     var avatarInitials: String? = nil
+    /// Pending tour reference — when present, the row exposes a
+    /// "Confirmar visita" entry in its long-press context menu so the
+    /// broker can take the high-frequency action without leaving Inicio.
+    /// Audit follow-up to Phase B's pill removal.
+    var pendingTour: TourRequest? = nil
 
     var timeAgo: String {
         let diff = Date().timeIntervalSince(time)
