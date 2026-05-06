@@ -42,8 +42,8 @@ struct AuthView: View {
                     // Claude Design (ios-login.html). Replaces the old
                     // gradient header + tab picker for the entry view.
                     WelcomeLoginScreen(
-                        onEmail:    { withAnimation(.easeInOut(duration: 0.22)) { mode = .login } },
-                        onRegister: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                        onEmail:    { withAnimation(Motion.layout) { mode = .login } },
+                        onRegister: { withAnimation(Motion.layout) { mode = .pickRole } },
                         onSuccess:  { dismiss() }
                     )
                 } else if mode == .pickRole {
@@ -53,11 +53,11 @@ struct AuthView: View {
                     // password / role dropdown / terms / CTA.
                     WelcomeRegisterScreen(
                         prefill: prefill,
-                        onLogin:   { withAnimation(.easeInOut(duration: 0.22)) { mode = .login } },
+                        onLogin:   { withAnimation(Motion.layout) { mode = .login } },
                         onSuccess: { dismiss() },
                         onAdvancedRole: { newMode, p in
                             prefill = p
-                            withAnimation(.easeInOut(duration: 0.22)) { mode = newMode }
+                            withAnimation(Motion.layout) { mode = newMode }
                         }
                     )
                 } else if mode == .login {
@@ -65,7 +65,7 @@ struct AuthView: View {
                     // the register screen. Inline 2FA is handled by the
                     // screen itself (no separate mode).
                     WelcomeLoginFormScreen(
-                        onRegister: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                        onRegister: { withAnimation(Motion.layout) { mode = .pickRole } },
                         onSuccess:  { dismiss() }
                     )
                 } else {
@@ -97,19 +97,19 @@ struct AuthView: View {
                             case .registerBroker:
                                 BrokerRegisterForm(
                                     onSuccess: { dismiss() },
-                                    onBack: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                                    onBack: { withAnimation(Motion.layout) { mode = .pickRole } },
                                     prefill: prefill
                                 )
                             case .registerInmobiliaria:
                                 InmobiliariaRegisterForm(
                                     onSuccess: { dismiss() },
-                                    onBack: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                                    onBack: { withAnimation(Motion.layout) { mode = .pickRole } },
                                     prefill: prefill
                                 )
                             case .registerConstructora:
                                 ConstructoraRegisterForm(
                                     onSuccess: { dismiss() },
-                                    onBack: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                                    onBack: { withAnimation(Motion.layout) { mode = .pickRole } },
                                     prefill: prefill
                                 )
                             }
@@ -129,7 +129,7 @@ struct AuthView: View {
                 } else if mode == .pickRole || mode == .login {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("← Volver") {
-                            withAnimation(.easeInOut(duration: 0.22)) { mode = .welcome }
+                            withAnimation(Motion.layout) { mode = .welcome }
                         }
                         .foregroundStyle(.white)
                         .accessibilityLabel("Volver")
@@ -1173,7 +1173,7 @@ struct WelcomeLoginFormScreen: View {
                 onSuccess()
             case .requires2FA(let sid, _):
                 twoFASessionId = sid
-                withAnimation(.easeInOut(duration: 0.22)) { show2FA = true }
+                withAnimation(Motion.layout) { show2FA = true }
             }
         } catch {
             self.error = error.localizedDescription
@@ -1198,7 +1198,7 @@ struct WelcomeLoginFormScreen: View {
             case .requires2FA(let sid, _):
                 email = savedEmail
                 twoFASessionId = sid
-                withAnimation(.easeInOut(duration: 0.22)) { show2FA = true }
+                withAnimation(Motion.layout) { show2FA = true }
             }
         } catch {
             self.error = error.localizedDescription

@@ -374,7 +374,7 @@ struct ApplicationDetailView: View {
             HStack(spacing: 6) {
                 ForEach(DetailTab.allCases) { tab in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.15)) { selectedTab = tab }
+                        withAnimation(Motion.fade) { selectedTab = tab }
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: tab.icon).font(.system(size: 11))

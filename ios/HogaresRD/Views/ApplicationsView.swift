@@ -175,7 +175,7 @@ struct ApplicationsView: View {
 
     private func filterTab(_ label: String, tag: Int, badge: Int) -> some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) { filter = tag }
+            withAnimation(Motion.layout) { filter = tag }
         } label: {
             VStack(spacing: 6) {
                 HStack(spacing: 4) {

@@ -220,7 +220,7 @@ struct FeedView: View {
                 ForEach(HomeCategory.allCases) { cat in
                     let active = (cat == selectedCategory)
                     Button {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        withAnimation(Motion.snappy) {
                             selectedCategory = cat
                         }
                     } label: {

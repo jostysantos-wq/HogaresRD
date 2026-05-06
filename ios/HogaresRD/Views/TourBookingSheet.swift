@@ -1199,7 +1199,7 @@ struct BrokerAvailabilityView: View {
                 .shadow(color: .black.opacity(0.2), radius: 10, y: 4)
                 .padding(.bottom, 16)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(response: 0.3), value: selectedDates.isEmpty)
+                .animation(Motion.arrival, value: selectedDates.isEmpty)
             }
         }
         .sheet(isPresented: $showEditor) {

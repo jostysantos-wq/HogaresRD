@@ -239,7 +239,7 @@ struct BrowseView: View {
                             .foregroundStyle(.white)
                         Spacer()
                         Button {
-                            withAnimation(.easeInOut(duration: 0.25)) { showFullList = true }
+                            withAnimation(Motion.layout) { showFullList = true }
                         } label: {
                             Label("Lista", systemImage: "list.bullet")
                                 .font(.caption.bold())
@@ -299,7 +299,7 @@ struct BrowseView: View {
 
                     // Floating Mapa button — centered at bottom, easy thumb reach
                     Button {
-                        withAnimation(.easeInOut(duration: 0.25)) { showFullList = false }
+                        withAnimation(Motion.layout) { showFullList = false }
                     } label: {
                         Label("Mapa", systemImage: "map.fill")
                             .font(.subheadline.bold())
@@ -357,7 +357,7 @@ struct BrowseView: View {
             if !compareManager.selectedIds.isEmpty {
                 compareFloatingBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.35), value: compareManager.selectedIds.count)
+                    .animation(Motion.arrival, value: compareManager.selectedIds.count)
             }
         }
         .alert("Ubicacion desactivada", isPresented: $showLocationDeniedAlert) {
@@ -415,7 +415,7 @@ struct BrowseView: View {
             if activeDropdown != nil {
                 withAnimation(.easeOut(duration: 0.15)) { activeDropdown = nil }
             } else if selectedListing != nil {
-                withAnimation(.easeInOut(duration: 0.25)) { selectedListing = nil }
+                withAnimation(Motion.layout) { selectedListing = nil }
             }
         }
     }
@@ -461,7 +461,7 @@ struct BrowseView: View {
                 )
                 .position(x: point.x, y: point.y - 17)
                 .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(Motion.layout) {
                         selectedListing = (selectedListing?.id == listing.id) ? nil : listing
                     }
                 }
@@ -506,7 +506,7 @@ struct BrowseView: View {
                         HStack {
                             Spacer()
                             Button {
-                                withAnimation(.easeInOut(duration: 0.25)) { selectedListing = nil }
+                                withAnimation(Motion.layout) { selectedListing = nil }
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 22))
@@ -940,7 +940,7 @@ struct BrowseView: View {
                         VStack(spacing: 14) {
                             HStack(spacing: 0) {
                                 Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) { priceMode = "range" }
+                                    withAnimation(Motion.layout) { priceMode = "range" }
                                 } label: {
                                     Text("Rango de Precio")
                                         .font(.subheadline.weight(priceMode == "range" ? .bold : .regular))
@@ -951,7 +951,7 @@ struct BrowseView: View {
                                 }
                                 .buttonStyle(.plain)
                                 Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) { priceMode = "payment" }
+                                    withAnimation(Motion.layout) { priceMode = "payment" }
                                 } label: {
                                     Text("Pago Mensual")
                                         .font(.subheadline.weight(priceMode == "payment" ? .bold : .regular))
@@ -1347,7 +1347,7 @@ struct ListingRow: View {
         .shadow(color: isSelected ? Color.rdBlue.opacity(0.30) : Color.black.opacity(0.08),
                 radius: isSelected ? 14 : 8, y: isSelected ? 6 : 3)
         .scaleEffect(isSelected ? 1.015 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(Motion.snappy, value: isSelected)
     }
 }
 
@@ -1407,7 +1407,7 @@ struct PeekCard: View {
         .shadow(color: isSelected ? Color.rdBlue.opacity(0.25) : .black.opacity(0.10),
                 radius: isSelected ? 12 : 8, y: 3)
         .scaleEffect(isSelected ? 1.03 : 1.0)
-        .animation(.spring(response: 0.25, dampingFraction: 0.75), value: isSelected)
+        .animation(Motion.snappy, value: isSelected)
     }
 }
 
@@ -1426,12 +1426,12 @@ struct MapPinLabel: View {
                 .background(isSelected ? Color.rdRed : Color.rdBlue, in: Capsule())
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
                 .scaleEffect(isSelected ? 1.15 : 1.0)
-                .animation(.spring(response: 0.25, dampingFraction: 0.65), value: isSelected)
+                .animation(Motion.snappy, value: isSelected)
 
             PinTriangle()
                 .fill(isSelected ? Color.rdRed : Color.rdBlue)
                 .frame(width: 10, height: 6)
-                .animation(.spring(response: 0.25, dampingFraction: 0.65), value: isSelected)
+                .animation(Motion.snappy, value: isSelected)
         }
     }
 }

@@ -510,7 +510,7 @@ struct DashboardApplicationsTab: View {
                 HStack {
                     Spacer()
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(Motion.layout) {
                             if multiSelectMode {
                                 multiSelectMode = false
                                 selectedIds.removeAll()
