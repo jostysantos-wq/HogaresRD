@@ -1,136 +1,21 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
-  <!-- Smart App Banner — replace PLACEHOLDER with real App Store ID once approved -->
-  <meta name="apple-itunes-app" content="app-id=PLACEHOLDER_APP_ID">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="refresh" content="0;url=/home">
-  <title>HogaresRD — Próximamente</title>
+  <link rel="canonical" href="/home">
+  <title>HogaresRD — Bienes raíces en República Dominicana</title>
   <meta name="description" content="La forma más fácil de encontrar y publicar propiedades en República Dominicana." />
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="HogaresRD">
-  <meta property="og:title" content="HogaresRD — Bienes raices en Republica Dominicana">
-  <meta property="og:description" content="La forma mas facil de encontrar y publicar propiedades en Republica Dominicana.">
+  <meta property="og:title" content="HogaresRD — Bienes raíces en República Dominicana">
+  <meta property="og:description" content="La forma más fácil de encontrar y publicar propiedades en República Dominicana.">
   <meta property="og:image" content="https://hogaresrd.com/img/og-default.jpg">
   <meta property="og:url" content="https://hogaresrd.com/">
-  <link rel="stylesheet" href="/css/core.css">
-
-  <style>
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
-
-    nav { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 2rem; border-bottom: 1px solid var(--border); background: var(--bg-card); box-shadow: var(--shadow); transition: background 0.3s, border-color 0.3s; }
-    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
-    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-    .logo-icon svg { width: 26px; height: 26px; }
-    .logo-text { font-size: 1.4rem; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
-    .logo-text span { color: var(--accent); }
-
-    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 1.5rem; }
-    .badge { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent-red); color: #fff; font-size: 0.75rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 50px; margin-bottom: 1.75rem; }
-    .badge svg { width: 12px; height: 12px; fill: #fff; }
-    h1 { font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 800; line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 1.25rem; }
-    h1 .highlight { color: var(--accent); }
-    .subtitle { font-size: clamp(1rem, 2.5vw, 1.25rem); color: var(--text-muted); max-width: 520px; line-height: 1.65; margin-bottom: 3rem; }
-
-    .countdown { display: flex; gap: 1.5rem; margin-bottom: 3.5rem; flex-wrap: wrap; justify-content: center; }
-    .countdown-unit { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.75rem; min-width: 90px; box-shadow: var(--shadow); transition: background 0.3s, border-color 0.3s; }
-    .countdown-unit .number { font-size: 2.5rem; font-weight: 800; color: var(--accent); line-height: 1; display: block; }
-    .countdown-unit .label { font-size: 0.7rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-top: 0.4rem; display: block; }
-
-    .cta-btn { display: inline-flex; align-items: center; gap: 0.6rem; background: var(--accent); color: #fff; text-decoration: none; font-size: 1rem; font-weight: 600; padding: 0.9rem 2rem; border-radius: 6px; transition: background 0.2s, transform 0.15s, box-shadow 0.2s; box-shadow: 0 4px 14px rgba(17,17,16,0.24); }
-    .cta-btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(17,17,16,0.32); }
-    .cta-btn svg { width: 18px; height: 18px; fill: #fff; }
-
-    footer { text-align: center; padding: 1.5rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border); transition: border-color 0.3s; }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-
-    @media (max-width: 480px) {
-      nav { padding: 1rem 1.25rem; }
-      .countdown { gap: 0.75rem; }
-      .countdown-unit { min-width: 72px; padding: 1rem 1.25rem; }
-      .countdown-unit .number { font-size: 2rem; }
-    }
-  </style>
+  <script>window.location.replace('/home');</script>
 </head>
 <body>
-
-  <nav>
-    <a class="logo" href="#">
-      <div class="logo-icon"><svg viewBox="120 70 280 290" fill="none"><line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="134" y1="88" x2="174" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="134" y1="340" x2="174" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="88" x2="378" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="340" x2="378" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="256" y1="188" x2="256" y2="146" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/><line x1="238" y1="146" x2="274" y2="146" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.85"/><circle cx="256" cy="100" r="10" fill="#fff" opacity="0.95"/></svg></div><span class="logo-text">Hogares<span>RD</span></span>
-    </a>
-  </nav>
-
-  <main>
-    <div class="badge">
-      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      República Dominicana
-    </div>
-    <h1>Tu Hogar Ideal<br>en <span class="highlight">La República</span></h1>
-    <p class="subtitle">La forma más fácil de encontrar, explorar y publicar propiedades en toda la República Dominicana — próximamente.</p>
-    <div class="countdown" id="countdown">
-      <div class="countdown-unit"><span class="number" id="days">--</span><span class="label">Días</span></div>
-      <div class="countdown-unit"><span class="number" id="hours">--</span><span class="label">Horas</span></div>
-      <div class="countdown-unit"><span class="number" id="minutes">--</span><span class="label">Minutos</span></div>
-      <div class="countdown-unit"><span class="number" id="seconds">--</span><span class="label">Segundos</span></div>
-    </div>
-    <a class="cta-btn" href="/submit">
-      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-      Publica Tu Propiedad
-    </a>
-  </main>
-
-  <footer style="text-align:center;padding:2rem 1rem;font-size:0.8rem;color:var(--text-muted,#888);">
-  <p>&copy; 2026 HogaresRD &mdash; Santo Domingo, Rep&uacute;blica Dominicana</p>
-  <p style="margin-top:0.5rem;"><a href="/privacidad">Privacidad</a> &middot; <a href="/terminos">T&eacute;rminos</a> &middot; <a href="/politica-de-reembolso">Reembolsos</a> &middot; <a href="/contacto">Contacto</a></p>
-  <p style="margin-top:0.75rem;font-size:0.72rem;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.6;"><strong>Aviso Legal:</strong> HogaresRD es una plataforma informativa de bienes ra&iacute;ces. No somos corredores, agentes ni intermediarios inmobiliarios. Toda la informaci&oacute;n es proporcionada por terceros y debe ser verificada de forma independiente.</p>
-</footer>
-
-  <script>
-    const html = document.documentElement;
-    function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
-    function setSaved(val) { try { localStorage.setItem('theme', val); } catch(e) {} }
-    html.setAttribute('data-theme', getSaved());
-    function toggleTheme() {
-      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-      html.setAttribute('data-theme', next);
-      setSaved(next);
-      const label = document.getElementById('themeLabel');
-      const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
-      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
-    }
-
-    const LAUNCH_KEY = 'hogaresrd_launch';
-    let launch = localStorage.getItem(LAUNCH_KEY);
-    if (!launch) {
-      const d = new Date();
-      d.setDate(d.getDate() + 60);
-      launch = d.toISOString();
-      localStorage.setItem(LAUNCH_KEY, launch);
-    }
-    const launchDate = new Date(launch);
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function tick() {
-      const diff = launchDate - Date.now();
-      if (diff <= 0) {
-        ['days','hours','minutes','seconds'].forEach(id => document.getElementById(id).textContent = '00');
-        return;
-      }
-      document.getElementById('days').textContent    = pad(Math.floor(diff / 86400000));
-      document.getElementById('hours').textContent   = pad(Math.floor((diff % 86400000) / 3600000));
-      document.getElementById('minutes').textContent = pad(Math.floor((diff % 3600000) / 60000));
-      document.getElementById('seconds').textContent = pad(Math.floor((diff % 60000) / 1000));
-    }
-    tick();
-    setInterval(tick, 1000);
-  </script>
-<script src="/js/pixel.js" defer></script>
-<script src="/js/error-reporter.js"></script>
-<script src="/js/cookie-consent.js"></script>
+  <noscript>Redirigiendo a <a href="/home">/home</a>…</noscript>
 </body>
 </html>

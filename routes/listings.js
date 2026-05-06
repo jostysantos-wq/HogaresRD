@@ -235,6 +235,66 @@ router.get('/agent/:refToken', (req, res) => {
   res.json({ name: agent.name, agencyName: agent.agencyName || agent.companyName || agent.name });
 });
 
+// GET /api/listings/facets — per-facet counts for the current filter
+// state. The frontend uses these to decorate filter dropdowns with
+// "(N)" badges so the user can see how many results each option will
+// produce. The query string accepts the same filters as GET /api/
+// listings — counts are computed by *removing* one filter at a time
+// so the counts shown next to each option don't depend on whether
+// that option is currently selected (NN/G's "open faceted search"
+// pattern).
+router.get('/facets', (req, res) => {
+  const all = store.getListings().filter(l => l.status !== 'pending' && l.status !== 'rejected');
+
+  const FACETS = {
+    type:          l => l.type,
+    property_type: l => l.property_type,
+    condition:     l => l.condition,
+    bedrooms:      l => l.bedrooms,
+    province:      l => l.province,
+  };
+
+  // Apply every active filter EXCEPT the one we're counting for.
+  function applyFiltersExcept(skipKey) {
+    return all.filter(l => {
+      for (const k of Object.keys(FACETS)) {
+        if (k === skipKey) continue;
+        const want = String(req.query[k] || '').trim();
+        if (!want) continue;
+        if (k === 'bedrooms') {
+          // Numeric "X+" filter
+          const min = parseInt(want, 10);
+          const have = parseInt(l.bedrooms, 10);
+          if (!Number.isFinite(min) || !Number.isFinite(have) || have < min) return false;
+        } else if (String(FACETS[k](l) || '') !== want) {
+          return false;
+        }
+      }
+      // Price range
+      const pMin = parseFloat(req.query.priceMin);
+      const pMax = parseFloat(req.query.priceMax);
+      const p = parseFloat(l.price);
+      if (Number.isFinite(pMin) && p < pMin) return false;
+      if (Number.isFinite(pMax) && p > pMax) return false;
+      return true;
+    });
+  }
+
+  const facets = {};
+  for (const key of Object.keys(FACETS)) {
+    const subset = applyFiltersExcept(key);
+    const counts = {};
+    for (const l of subset) {
+      const v = FACETS[key](l);
+      if (v == null || v === '') continue;
+      counts[v] = (counts[v] || 0) + 1;
+    }
+    facets[key] = counts;
+  }
+
+  res.json({ facets, total: applyFiltersExcept(null).length });
+});
+
 // GET /api/agencies — list all agencies with listing counts
 router.get('/agencies', (req, res) => {
   const listings = store.getListings();

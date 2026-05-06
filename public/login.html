@@ -149,35 +149,37 @@
       <h1 class="auth-title">Iniciar Sesión</h1>
       <p class="auth-subtitle">Bienvenido de vuelta a HogaresRD</p>
 
-      <div class="error-msg" id="errorMsg"></div>
+      <div class="error-msg" id="errorMsg" role="alert" aria-live="polite"></div>
 
-      <form id="loginForm" novalidate>
+      <form id="loginForm" novalidate aria-label="Iniciar sesión">
         <div class="field">
-          <label>Correo electrónico</label>
-          <input type="email" id="email" placeholder="tu@correo.com" required autocomplete="email" />
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" name="email" placeholder="tu@correo.com" required autocomplete="email" inputmode="email" aria-required="true" aria-describedby="emailError" />
+          <span class="field-error" id="emailError" aria-live="polite"></span>
         </div>
         <div class="field">
-          <label>Contraseña</label>
-          <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" minlength="6" aria-required="true" aria-describedby="passwordError" />
+          <span class="field-error" id="passwordError" aria-live="polite"></span>
         </div>
         <button type="submit" class="btn-primary" id="submitBtn">Iniciar Sesión</button>
       </form>
 
       <!-- 2FA Code Entry -->
-      <div id="twoFASection" style="display:none;">
+      <div id="twoFASection" style="display:none;" role="region" aria-label="Verificación en dos pasos">
         <div style="text-align:center;margin-bottom:20px;">
           <h2 style="margin:0 0 4px;font-size:1.1rem;">Verificación en dos pasos</h2>
           <p style="margin:0;font-size:0.85rem;color:var(--muted,#6b7280);">Ingresa el código de 6 dígitos enviado a tu correo</p>
         </div>
-        <div class="twofa-inputs" id="twoFAInputs">
-          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="0" autofocus>
-          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="1">
-          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="2">
-          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="3">
-          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="4">
-          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="5">
+        <div class="twofa-inputs" id="twoFAInputs" role="group" aria-label="Código de verificación">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="0" autofocus aria-label="Dígito 1">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="1" aria-label="Dígito 2">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="2" aria-label="Dígito 3">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="3" aria-label="Dígito 4">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="4" aria-label="Dígito 5">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="5" aria-label="Dígito 6">
         </div>
-        <div class="error-msg" id="twoFAError"></div>
+        <div class="error-msg" id="twoFAError" role="alert" aria-live="polite"></div>
         <button type="button" class="btn-primary" id="verify2FABtn" disabled>Verificar</button>
         <div style="text-align:center;margin-top:12px;">
           <span id="twoFATimer" style="font-size:0.82rem;color:var(--muted,#6b7280);"></span>

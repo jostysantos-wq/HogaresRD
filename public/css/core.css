@@ -164,6 +164,28 @@ img { display: block; max-width: 100%; }
 button { font-family: var(--font); cursor: pointer; }
 input, select, textarea { font-family: var(--font); }
 
+/* ── Global focus ring ───────────────────────────────────────────
+   WCAG 2.2 §2.4.7: 2 px thick, ≥3:1 against adjacent surface.
+   :focus-visible only — pointer focus stays clean, keyboard focus
+   is always visible. Pages MUST NOT redefine `outline: none`
+   without providing an equivalent ring. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Inputs use a tinted box-shadow ring instead of an outline so the
+   ring sits flush against the input's own rounded border. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--ink) !important;
+  box-shadow: 0 0 0 3px rgba(19,19,24,0.18);
+}
+
 /* ── Navigation ────────────────────────────────────────────────── */
 nav {
   position: sticky;
@@ -305,7 +327,7 @@ nav {
 .btn-primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
-  box-shadow: 0 4px 12px rgba(0,106,255,0.3);
+  box-shadow: 0 4px 12px rgba(19,19,24,0.22);
 }
 
 .btn-secondary {
@@ -383,7 +405,7 @@ nav {
 
 .input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0,106,255,0.12);
+  box-shadow: 0 0 0 3px rgba(19,19,24,0.14);
 }
 
 .input::placeholder { color: var(--text-muted); }
@@ -668,4 +690,84 @@ nav {
     transform: none !important;
   }
   .card-hover:hover { transform: none; }
+  /* Site-wide: any user opting into reduced motion gets near-zero
+     animation/transition durations. Snaps replace springs. */
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton { animation: none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   COMPONENT PRIMITIVES — reusable across pages
+   Promote shared shapes here so pages stop inlining duplicates.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Ghost button — minimal, low-emphasis (cancel, "Maybe later") */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+.btn-ghost:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* Chip — pill for filter values, tags, applied-filter strip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.7rem;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition),
+              border-color var(--transition);
+  white-space: nowrap;
+}
+.chip:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.chip.active,
+.chip[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.chip .chip-count {
+  font-weight: 500;
+  opacity: 0.7;
+  font-size: 0.95em;
+}
+.chip .chip-close {
+  margin-left: 0.15rem;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.chip .chip-close:hover { opacity: 1; }
+
+/* Inline native validation error helper for forms */
+.field-error {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: var(--font-size-xs);
+  color: var(--red);
+  min-height: 1em;
+}
+input:user-invalid,
+select:user-invalid,
+textarea:user-invalid {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(229,62,62,0.14);
 }

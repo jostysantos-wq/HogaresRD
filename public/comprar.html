@@ -631,10 +631,14 @@
       btn.classList.toggle('saved', saved.includes(id));
     }
 
-    function buildCard(l) {
+    function buildCard(l, idx) {
       const firstImg = Array.isArray(l.images) && l.images.length ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0]?.url || '') : '';
+      // First 4 cards are above-the-fold on most viewports — eager-load
+      // them so they contribute to LCP. The rest lazy-load.
+      const isAboveFold = (idx ?? 99) < 4;
+      const altText = (l.title || (l.sector || l.city || 'Propiedad') + ' en venta').slice(0, 120);
       const img = firstImg
-        ? `<img src="${esc(firstImg)}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-img-placeholder\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z\\'/></svg></div>')" />`
+        ? `<img src="${esc(firstImg)}" alt="${esc(altText)}" width="400" height="300" decoding="async" ${isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-img-placeholder\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z\\'/></svg></div>')" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
       const isSaved = getSaved().includes(l.id);
       return `
@@ -791,6 +795,7 @@
 
     function applyFilters() {
       loadListings(1);
+      loadFacetCounts();
       renderFilterChips();
       // Meta Pixel — Search
       if (window.MetaPixel) {
@@ -824,6 +829,48 @@
         sel.appendChild(opt);
       });
     }).catch(() => {});
+
+    // ── Faceted filter counts ─────────────────────────────────────
+    // Hits /api/listings/facets with the current filter state and
+    // decorates each <select> option with "(N)" suffixes so users
+    // can see how many results each option will produce.
+    // Counts are computed with each facet excluded from its own
+    // filter (NN/G's open faceted-search pattern) so an option's
+    // count doesn't fall to 0 just because it's currently selected.
+    let _lastFacets = null;
+    async function loadFacetCounts() {
+      try {
+        const filters = getFilters();
+        const params  = new URLSearchParams();
+        Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+        const res = await fetch('/api/listings/facets?' + params.toString());
+        const data = await res.json();
+        _lastFacets = data.facets || {};
+        decorateSelectWithCounts('fBedrooms',     _lastFacets.bedrooms,      v => parseInt(v, 10), true /* min-match */);
+        decorateSelectWithCounts('fPropertyType', _lastFacets.property_type, v => v);
+        decorateSelectWithCounts('fCondition',    _lastFacets.condition,     v => v);
+      } catch (_) { /* silent — counts are an enhancement */ }
+    }
+    function decorateSelectWithCounts(selectId, counts, mapVal, minMatch) {
+      const sel = document.getElementById(selectId);
+      if (!sel || !counts) return;
+      Array.from(sel.options).forEach(opt => {
+        const baseLabel = opt.dataset.baseLabel || opt.textContent.replace(/\s*\(\d+\)\s*$/, '');
+        opt.dataset.baseLabel = baseLabel;
+        if (!opt.value) { opt.textContent = baseLabel; return; }
+        let n = 0;
+        if (minMatch) {
+          const min = mapVal(opt.value);
+          for (const [k, v] of Object.entries(counts)) {
+            const have = parseInt(k, 10);
+            if (Number.isFinite(have) && have >= min) n += v;
+          }
+        } else {
+          n = counts[mapVal(opt.value)] || 0;
+        }
+        opt.textContent = n > 0 ? `${baseLabel} (${n})` : baseLabel;
+      });
+    }
 
     // ── Save Search ───────────────────────────────────────────────────
     async function saveCurrentSearch() {
@@ -919,9 +966,14 @@
         });
         appleMap.setCameraDistanceAnimated(15000); // Close neighborhood zoom to show listings immediately
 
-        // Filter listings to match visible map area
+        // Filter listings to match visible map area. Gated by the
+        // "Buscar al mover el mapa" checkbox — when off, the user
+        // is panning the map without re-filtering the list (useful
+        // for browsing a wider area before committing).
         let regionChangeTimer = null;
         appleMap.addEventListener('region-change-end', () => {
+          const onMove = document.getElementById('searchOnMove');
+          if (onMove && !onMove.checked) return;
           clearTimeout(regionChangeTimer);
           regionChangeTimer = setTimeout(() => {
             filterListingsToMapView();
@@ -1053,6 +1105,7 @@
     }
     // Load listings first, then center map on them
     loadListings(1);
+    loadFacetCounts();
     waitForMapKit();
 
     // ── Location Search using Apple MapKit JS Search (mirrors iOS app) ───

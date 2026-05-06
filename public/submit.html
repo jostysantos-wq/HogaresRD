@@ -70,9 +70,12 @@
     }
     .logo-text span { color: var(--accent); }
 
-    /* ── Hero header ────────────────────────────────────────── */
+    /* ── Hero header ─────────────────────────────────────────
+       Editorial ink-on-paper gradient (matches home.html). The
+       previous blue gradient broke the rebrand on the highest-
+       intent page in the funnel. */
     .hero {
-      background: linear-gradient(135deg, var(--accent) 0%, #0052CC 60%, #003D99 100%);
+      background: linear-gradient(135deg, var(--ink) 0%, #1F1B26 60%, #2A2330 100%);
       color: #fff;
       text-align: center;
       padding: 3.5rem 1.5rem 3rem;
@@ -92,7 +95,7 @@
       50% { transform: translate(5%, -3%); }
     }
     [data-theme="dark"] .hero {
-      background: linear-gradient(135deg, var(--bg-card) 0%, #1A2235 100%);
+      background: linear-gradient(135deg, var(--bg-card) 0%, #221E2A 100%);
       border-bottom: 1px solid var(--border);
     }
 
@@ -799,12 +802,12 @@
               <input type="text" id="claimAgentName" placeholder="Nombre de contacto" />
             </div>
             <div class="field">
-              <label>Teléfono <span class="req">*</span></label>
-              <input type="tel" id="claimPhone" placeholder="+1 (809) 000-0000" />
+              <label for="claimPhone">Teléfono <span class="req">*</span></label>
+              <input type="tel" id="claimPhone" placeholder="+1 (809) 000-0000" autocomplete="tel" inputmode="tel" required aria-required="true" />
             </div>
             <div class="field">
-              <label>Email <span class="req">*</span></label>
-              <input type="email" id="claimEmail" placeholder="tu@correo.com" />
+              <label for="claimEmail">Email <span class="req">*</span></label>
+              <input type="email" id="claimEmail" placeholder="tu@correo.com" autocomplete="email" inputmode="email" required aria-required="true" />
             </div>
           </div>
         </div>
@@ -1813,7 +1816,7 @@
         // Place initial marker
         marker = new mapkit.MarkerAnnotation(
           new mapkit.Coordinate(DR_CENTER.lat, DR_CENTER.lng),
-          { color: '#006AFF', glyphText: '📍', title: 'Ubicación', draggable: true }
+          { color: '#131318', glyphText: '📍', title: 'Ubicación', draggable: true }
         );
         map.addAnnotation(marker);
 
@@ -3117,7 +3120,7 @@
               <div id="fpImageWrap" style="position:relative;width:100%;border-radius:12px;overflow:hidden;cursor:crosshair;background:#111;${imgUrl ? '' : 'display:none;'}">
                 ${imgUrl ? `<img id="fpImage" src="${imgUrl}" style="display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none;" alt="" />` : ''}
                 <div id="fpMarker" style="display:none;position:absolute;width:32px;height:32px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,0.6),0 0 12px rgba(0,0,0,0.5);transform:translate(-50%,-50%);pointer-events:none;"></div>
-                <div id="fpCrop" style="display:none;position:absolute;border:2px solid #006AFF;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);pointer-events:none;"></div>
+                <div id="fpCrop" style="display:none;position:absolute;border:2px solid #131318;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);pointer-events:none;"></div>
               </div>
               ${imgUrl ? '' : '<p style="text-align:center;font-size:0.85rem;color:var(--text-muted);padding:2rem 1rem;">No subiste fotos. Usa la opción de subir vertical.</p>'}
               <p id="fpHint" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin:0.75rem 0;">Toca la imagen para marcar el punto focal</p>

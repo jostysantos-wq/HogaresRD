@@ -27,12 +27,13 @@
 
   <style>
     /*
-     * Broker dashboard local palette — overrides the global cream/ink
-     * tokens with the dashboard's own blue accent. Editing here changes
-     * the dashboard's identity color globally for this page.
+     * Broker dashboard inherits the global ink palette so the brand
+     * promise survives the funnel. Previously this overrode --accent
+     * with #006AFF blue — the public site already rebranded to ink,
+     * so the dashboard now matches. Toggles + dashboard-specific
+     * extras (orange/purple) stay local.
      */
     :root {
-      --accent: #006AFF;
       --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
       /* Missing variables from old palette — mapped to new design system */
       --bg-section: #F4F6F9;
@@ -4210,9 +4211,9 @@
 
   // ── Brand colors (centralised palette for charts and inline JS) ──
   const BRAND_COLORS = {
-    accent:    getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#006AFF',
-    accentAlt: '#0038A8',
-    red:       getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#CF142B',
+    accent:    getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#131318',
+    accentAlt: '#36363E',
+    red:       getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#E53E3E',
     ink:       getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#131318',
   };
 

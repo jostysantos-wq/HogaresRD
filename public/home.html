@@ -2452,8 +2452,9 @@
       const id = l.id || l._id;
       const status = listingStatus(l);
       const photo = listingPhoto(l);
+      const altText = (l.title || (l.sector || l.city || 'Propiedad') + ' en venta').slice(0, 120);
       const imgInner = photo
-        ? '<img src="' + photo + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+        ? '<img src="' + photo + '" alt="' + altText.replace(/"/g, '&quot;') + '" loading="lazy" decoding="async" width="600" height="400" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
         : '<span>' + (l.title || '').toLowerCase() + '</span>';
       return `
         <a href="${window.HRD_REF ? window.HRD_REF.withRef('/listing/' + id) : '/listing/' + id}" class="bo-card">
@@ -2481,8 +2482,9 @@
       const id = l.id || l._id;
       const status = listingStatus(l);
       const photo = listingPhoto(l);
+      const altText = (l.title || (l.sector || l.city || 'Propiedad') + ' en venta').slice(0, 120);
       const imgInner = photo
-        ? '<img src="' + photo + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+        ? '<img src="' + photo + '" alt="' + altText.replace(/"/g, '&quot;') + '" loading="lazy" decoding="async" width="600" height="400" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
         : '<span>' + (l.title || '').toLowerCase() + '</span>';
       return `
         <a href="${window.HRD_REF ? window.HRD_REF.withRef('/listing/' + id) : '/listing/' + id}" class="ny-card">
