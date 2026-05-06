@@ -125,11 +125,13 @@
         <div class="field-row">
           <div class="field">
             <label for="email">Correo electrónico *</label>
-            <input type="email" id="email" name="email" placeholder="info@inmobiliaria.com" required autocomplete="email" inputmode="email" aria-required="true" />
+            <input type="email" id="email" name="email" placeholder="info@inmobiliaria.com" required autocomplete="email" inputmode="email" aria-required="true" aria-describedby="emailError" />
+            <span class="field-error" id="emailError" aria-live="polite"></span>
           </div>
           <div class="field">
             <label for="phone">Teléfono *</label>
-            <input type="tel" id="phone" name="phone" placeholder="+1 (809) 000-0000" required autocomplete="tel" inputmode="tel" pattern="[0-9\-\+\s\(\)]{7,}" aria-required="true" />
+            <input type="tel" id="phone" name="phone" placeholder="+1 (809) 000-0000" required autocomplete="tel" inputmode="tel" pattern="[0-9\-\+\s\(\)]{7,}" aria-required="true" aria-describedby="phoneError" />
+            <span class="field-error" id="phoneError" aria-live="polite"></span>
           </div>
         </div>
 
@@ -148,7 +150,8 @@
         <div class="field-row">
           <div class="field">
             <label for="password">Contraseña *</label>
-            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" aria-required="true" aria-describedby="pwStrengthWrap" />
+            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" aria-required="true" aria-describedby="pwStrengthWrap passwordError" />
+            <span class="field-error" id="passwordError" aria-live="polite"></span>
             <div class="pw-strength-wrap" id="pwStrengthWrap" style="margin-top:6px;display:none;">
               <div style="display:flex;gap:3px;margin-bottom:5px;">
                 <div class="pw-bar" id="pwBar1" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
@@ -167,7 +170,8 @@
           </div>
           <div class="field">
             <label for="confirmPassword">Confirmar contraseña *</label>
-            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" minlength="8" aria-required="true" />
+            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" minlength="8" aria-required="true" aria-describedby="confirmPasswordError" />
+            <span class="field-error" id="confirmPasswordError" aria-live="polite"></span>
           </div>
         </div>
 
