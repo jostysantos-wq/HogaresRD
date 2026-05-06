@@ -409,7 +409,7 @@ struct TeamMembersTab: View {
         do {
             try await api.removeBroker(brokerId: broker.id)
             // Remove from local state with animation
-            withAnimation(.easeInOut(duration: 0.3)) {
+            withAnimation(Motion.arrival) {
                 team?.brokers.removeAll { $0.id == broker.id }
                 removeSuccess = "\(broker.name) ha sido desvinculado del equipo."
             }
@@ -555,7 +555,7 @@ struct BrokerCard: View {
             .background(Color(.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .opacity(isRemoving ? 0.5 : 1)
-            .animation(.easeInOut(duration: 0.2), value: isRemoving)
+            .animation(Motion.fade, value: isRemoving)
         }
         .buttonStyle(.plain)
     }
@@ -1272,20 +1272,9 @@ struct InmobiliariaPerformanceListView: View {
 // MARK: - Helper
 
 private func emptyTeamState(icon: String, title: String, subtitle: String) -> some View {
-    VStack(spacing: 14) {
-        Image(systemName: icon)
-            .font(.system(size: 44))
-            .foregroundStyle(Color(.tertiaryLabel))
-        Text(title)
-            .font(.headline)
-            .foregroundStyle(.secondary)
-        Text(subtitle)
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .multilineTextAlignment(.center)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 40)
+    ContentUnavailableView(title, systemImage: icon, description: Text(subtitle))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
 }
 
 // ────────────────────────────────────────────────────────────────────

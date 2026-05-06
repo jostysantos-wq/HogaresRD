@@ -236,7 +236,7 @@ struct TourBookingSheet: View {
                             ForEach(dateStrip) { day in
                                 Button {
                                     if day.isAvailable {
-                                        withAnimation(.easeOut(duration: 0.15)) {
+                                        withAnimation(Motion.fade) {
                                             selectedDate = day.id
                                             selectedTime = nil
                                         }
@@ -284,7 +284,7 @@ struct TourBookingSheet: View {
 
                 // Expand to full calendar
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(Motion.layout) {
                         showFullCalendar.toggle()
                     }
                 } label: {
@@ -409,7 +409,7 @@ struct TourBookingSheet: View {
                         FlowLayout(spacing: 8) {
                             ForEach(slots, id: \.time) { slot in
                                 Button {
-                                    withAnimation(.easeOut(duration: 0.1)) {
+                                    withAnimation(Motion.snappy) {
                                         selectedTime = slot.time
                                     }
                                 } label: {
@@ -459,7 +459,7 @@ struct TourBookingSheet: View {
 
     private func tourTypeCard(type: String, icon: String, title: String, subtitle: String) -> some View {
         Button {
-            withAnimation(.easeOut(duration: 0.15)) { tourType = type }
+            withAnimation(Motion.fade) { tourType = type }
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: icon)

@@ -1015,7 +1015,7 @@ struct ListingDetailView: View {
                     .lineSpacing(2.5)
                     .lineLimit(descriptionExpanded ? nil : 4)
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { descriptionExpanded.toggle() }
+                    withAnimation(Motion.layout) { descriptionExpanded.toggle() }
                 } label: {
                     Text(descriptionExpanded ? "Leer menos" : "Leer más")
                         .font(.system(size: 13, weight: .semibold))

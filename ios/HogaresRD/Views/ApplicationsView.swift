@@ -51,18 +51,11 @@ struct ApplicationsView: View {
                 }
                 .padding()
             } else if applications.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 60))
-                        .foregroundStyle(Color.rdBlue.opacity(0.35))
-                    Text("Sin aplicaciones")
-                        .font(.title2).bold()
-                    Text("Cuando apliques a una propiedad verás el estado de tu solicitud aquí.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
+                EmptyState.plain(
+                    title: "Sin aplicaciones",
+                    systemImage: "doc.text.magnifyingglass",
+                    description: "Cuando apliques a una propiedad verás el estado de tu solicitud aquí."
+                )
             } else {
                 VStack(spacing: 0) {
                     // ── Summary bar ──
@@ -85,16 +78,14 @@ struct ApplicationsView: View {
 
                     // ── Card list ──
                     if displayedApps.isEmpty {
-                        VStack(spacing: 12) {
-                            Spacer()
-                            Image(systemName: filter == 0 ? "checkmark.circle" : "tray")
-                                .font(.system(size: 36))
-                                .foregroundStyle(.secondary.opacity(0.5))
-                            Text(filter == 0 ? "No tienes aplicaciones activas" : "No hay aplicaciones finalizadas")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                        }
+                        EmptyState.plain(
+                            title: filter == 0 ? "Sin aplicaciones activas" : "Sin aplicaciones finalizadas",
+                            systemImage: filter == 0 ? "checkmark.circle" : "tray",
+                            description: filter == 0
+                                ? "Tus solicitudes en curso aparecerán aquí."
+                                : "Las aplicaciones cerradas se archivan en esta vista."
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 12) {

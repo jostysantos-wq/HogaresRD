@@ -94,7 +94,7 @@ struct ConversationsView: View {
                 HStack(spacing: 8) {
                     ForEach(ConvFilter.allCases) { filter in
                         Button {
-                            withAnimation(.easeInOut(duration: 0.2)) { activeFilter = filter }
+                            withAnimation(Motion.layout) { activeFilter = filter }
                         } label: {
                             HStack(spacing: 4) {
                                 Text(filter.rawValue)

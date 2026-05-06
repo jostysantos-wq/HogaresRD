@@ -413,7 +413,27 @@ struct DashboardHomeView: View {
     /// applications tab in one tap.
     private var pipelineStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Pipeline", systemImage: "arrow.right.arrow.left")
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.right.arrow.left")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.rdBlue)
+                Text("Pipeline")
+                    .font(.system(size: 17, weight: .heavy))
+                    .tracking(-0.2)
+                Spacer()
+                Button {
+                    onTapTab(3) // Análisis › Analíticas — owns the donut + breakdown
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("Ver detalle")
+                            .font(.caption.weight(.semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(Color.rdBlue)
+                }
+                .buttonStyle(.plain)
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(pipelineStages, id: \.status) { stage in

@@ -569,7 +569,7 @@ struct ConversationThreadView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(Motion.layout) {
                         showQuickReplies.toggle()
                     }
                 } label: {
@@ -695,7 +695,7 @@ struct ConversationThreadView: View {
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         if let last = messages.last {
-            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
+            withAnimation(Motion.fade) { proxy.scrollTo(last.id, anchor: .bottom) }
         }
     }
 

@@ -88,6 +88,7 @@ struct BrowseView: View {
     // Compare
     @StateObject private var compareManager = CompareManager.shared
     @State private var showCompare = false
+    @State private var compareCapacityToast = false
 
     // Location denial alert
     @State private var showLocationDeniedAlert = false
@@ -360,6 +361,30 @@ struct BrowseView: View {
                     .animation(Motion.arrival, value: compareManager.selectedIds.count)
             }
         }
+        .overlay(alignment: .top) {
+            if compareCapacityToast {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.white)
+                    Text("Solo puedes comparar 3 propiedades")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.rdRed, in: Capsule())
+                .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+                .padding(.top, 60)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .compareCapacityHit)) { _ in
+            withAnimation(Motion.arrival) { compareCapacityToast = true }
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                withAnimation(Motion.fade) { compareCapacityToast = false }
+            }
+        }
         .alert("Ubicacion desactivada", isPresented: $showLocationDeniedAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Abrir Ajustes") {
@@ -413,7 +438,7 @@ struct BrowseView: View {
         }
         .onTapGesture {
             if activeDropdown != nil {
-                withAnimation(.easeOut(duration: 0.15)) { activeDropdown = nil }
+                withAnimation(Motion.fade) { activeDropdown = nil }
             } else if selectedListing != nil {
                 withAnimation(Motion.layout) { selectedListing = nil }
             }
@@ -755,7 +780,7 @@ struct BrowseView: View {
             if let dd = activeDropdown {
                 Color.black.opacity(0.001)
                     .ignoresSafeArea()
-                    .onTapGesture { withAnimation(.easeOut(duration: 0.15)) { activeDropdown = nil } }
+                    .onTapGesture { withAnimation(Motion.fade) { activeDropdown = nil } }
                     .overlay(alignment: .top) {
                         dropdownContent(for: dd)
                             .padding(.top, 44)
@@ -768,7 +793,7 @@ struct BrowseView: View {
 
     private func quickChip(label: String, isActive: Bool, dropdown: QuickDropdown) -> some View {
         Button {
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(Motion.fade) {
                 activeDropdown = activeDropdown == dropdown ? nil : dropdown
             }
         } label: {

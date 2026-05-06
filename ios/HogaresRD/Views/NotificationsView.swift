@@ -681,7 +681,7 @@ struct AppSettingsView: View {
                             option: opt,
                             isSelected: schemePref == opt.tag
                         ) {
-                            withAnimation(.easeInOut(duration: 0.18)) {
+                            withAnimation(Motion.fade) {
                                 schemePref = opt.tag
                             }
                         }

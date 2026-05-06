@@ -33,7 +33,7 @@ struct ContactTimelineView: View {
                     HStack(spacing: 8) {
                         ForEach(filters, id: \.label) { f in
                             Button {
-                                withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = f.type }
+                                withAnimation(Motion.fade) { selectedFilter = f.type }
                                 Task { await load() }
                             } label: {
                                 Text(f.label)

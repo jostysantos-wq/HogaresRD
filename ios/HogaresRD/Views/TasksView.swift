@@ -240,15 +240,13 @@ struct TasksView: View {
 
                     if active.isEmpty && done.isEmpty {
                         Section {
-                            VStack(spacing: 12) {
-                                Image(systemName: "checklist")
-                                    .font(.system(size: 44))
-                                    .foregroundStyle(Color(.tertiaryLabel))
-                                Text("No hay tareas en esta vista")
-                                    .font(.subheadline).foregroundStyle(.secondary)
-                            }
+                            EmptyState.plain(
+                                title: "Sin tareas",
+                                systemImage: "checklist",
+                                description: "Crea tu primera tarea para empezar a organizar tu trabajo."
+                            )
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 36)
+                            .padding(.vertical, 24)
                         }
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)

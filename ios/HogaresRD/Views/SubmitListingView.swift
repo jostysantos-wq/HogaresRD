@@ -1312,7 +1312,7 @@ struct LocationPickerView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.separator), lineWidth: 1))
                 .onTapGesture { point in
                     if let coord = proxy.convert(point, from: .local) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(Motion.layout) {
                             coordinate = coord
                             position = .region(MKCoordinateRegion(
                                 center: coord,

@@ -16,7 +16,7 @@ struct SecretaryDashboardView: View {
                     HStack(spacing: 6) {
                         ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
                             Button {
-                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
+                                withAnimation(Motion.layout) { selectedTab = i }
                             } label: {
                                 HStack(spacing: 4) {
                                     if i == 0 {
@@ -38,7 +38,7 @@ struct SecretaryDashboardView: View {
                     .padding(.vertical, 10)
                 }
                 .onChange(of: selectedTab) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(Motion.layout) {
                         proxy.scrollTo(selectedTab, anchor: .center)
                     }
                 }

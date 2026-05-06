@@ -187,7 +187,7 @@ struct PaymentsTabView: View {
 
     private func filterChip(_ label: String, value: String) -> some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = value }
+            withAnimation(Motion.fade) { selectedFilter = value }
         } label: {
             Text(label)
                 .font(.caption.bold())

@@ -214,7 +214,7 @@ struct ChatIAView: View {
     private func scrollToBottom() {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(Motion.fade) {
                 if sending {
                     scrollProxy?.scrollTo("typing", anchor: .bottom)
                 } else if let last = messages.last {
@@ -315,7 +315,7 @@ struct TypingIndicator: View {
         }
         .onAppear {
             Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(Motion.fade) {
                     phase = (phase + 1) % 3
                 }
             }

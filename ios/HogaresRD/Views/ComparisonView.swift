@@ -375,12 +375,19 @@ struct ComparisonView: View {
 }
 
 // MARK: - Compare selection manager (used by BrowseView)
+extension Notification.Name {
+    /// Posted when CompareManager.toggle is called past capacity. UI
+    /// surfaces (BrowseView) listen to render a transient toast.
+    static let compareCapacityHit = Notification.Name("rd.compareCapacityHit")
+}
+
 class CompareManager: ObservableObject {
     static let shared = CompareManager()
     @Published var selectedIds: [String] = []
 
     let maxItems = 3
 
+    @discardableResult
     func toggle(_ id: String) -> Bool {
         if let idx = selectedIds.firstIndex(of: id) {
             selectedIds.remove(at: idx)
@@ -389,7 +396,9 @@ class CompareManager: ObservableObject {
             selectedIds.append(id)
             return true
         }
-        return false // at capacity
+        // At capacity: tell listeners so they can show feedback.
+        NotificationCenter.default.post(name: .compareCapacityHit, object: nil)
+        return false
     }
 
     func isSelected(_ id: String) -> Bool {

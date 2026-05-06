@@ -151,7 +151,7 @@ struct PushPermissionPrimer: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button {
-                withAnimation(.easeInOut(duration: 0.25)) { isPresented = false }
+                withAnimation(Motion.layout) { isPresented = false }
             } label: {
                 Text("Cerrar")
                     .font(.subheadline.bold())
@@ -190,23 +190,23 @@ struct PushPermissionPrimer: View {
             await MainActor.run {
                 pushService.enableAllPreferences()
             }
-            withAnimation(.easeInOut(duration: 0.25)) { grantedSuccess = true }
+            withAnimation(Motion.arrival) { grantedSuccess = true }
             // Auto dismiss after 2.5s
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(2.5))
-                withAnimation(.easeInOut(duration: 0.25)) { isPresented = false }
+                withAnimation(Motion.layout) { isPresented = false }
             }
         } else {
             // Native iOS said no — store dismissal so we don't nag
             UserDefaults.standard.set(Date().timeIntervalSince1970,
                                       forKey: SavedStore.SOFT_ASK_DISMISSED_KEY)
-            withAnimation(.easeInOut(duration: 0.25)) { isPresented = false }
+            withAnimation(Motion.layout) { isPresented = false }
         }
     }
 
     private func dismissNotNow() {
         UserDefaults.standard.set(Date().timeIntervalSince1970,
                                   forKey: SavedStore.SOFT_ASK_DISMISSED_KEY)
-        withAnimation(.easeInOut(duration: 0.25)) { isPresented = false }
+        withAnimation(Motion.layout) { isPresented = false }
     }
 }
