@@ -365,7 +365,7 @@
     .modal-field { margin-bottom: 0.9rem; }
     .modal-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem; }
     .modal-field input, .modal-field textarea { width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-family: inherit; outline: none; transition: border-color 0.18s, box-shadow 0.18s; box-sizing: border-box; }
-    .modal-field input:focus, .modal-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.1); }
+    .modal-field input:focus, .modal-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
     .modal-field textarea { resize: vertical; min-height: 80px; }
     .modal-note { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1.1rem; line-height: 1.5; }
     .modal-note strong { color: var(--text); }
@@ -404,7 +404,7 @@
     .apply-field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.4px; }
     .required-star { color: var(--red); font-weight: 800; margin-left: 2px; }
     .apply-field input, .apply-field select, .apply-field textarea { width: 100%; padding: 0.68rem 0.85rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
-    .apply-field input:focus, .apply-field select:focus, .apply-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.12); }
+    .apply-field input:focus, .apply-field select:focus, .apply-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
     .apply-field textarea { resize: vertical; min-height: 76px; }
     .apply-field .apply-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.3rem; }
 
@@ -454,7 +454,18 @@
 
     /* ── NEIGHBORHOOD ───────────────────────────────────────── */
     .neighborhood-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 0.5rem; }
-    .neighborhood-tile { display: flex; gap: 0.85rem; padding: 1rem 1.1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; align-items: flex-start; }
+    .neighborhood-tile {
+      display: flex; gap: 0.85rem; padding: 1rem 1.1rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; align-items: flex-start;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+    }
+    a.neighborhood-tile:hover {
+      border-color: var(--ink);
+      box-shadow: 0 4px 12px rgba(19,19,24,0.08);
+      transform: translateY(-1px);
+    }
     .neighborhood-tile-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .neighborhood-tile-icon svg { width: 18px; height: 18px; fill: var(--accent); }
     .neighborhood-tile-body { flex: 1; min-width: 0; }
@@ -479,7 +490,7 @@
     .sidebar-row-value.red { color: var(--red); }
     .avail-progress { margin-top: 0.4rem; }
     .btn-cta { display: flex; width: 100%; text-align: center; padding: 0.9rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.2s; margin-bottom: 0.6rem; align-items: center; justify-content: center; gap: 0.5rem; }
-    .btn-cta:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,106,255,0.25); }
+    .btn-cta:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(19,19,24,0.25); }
     .btn-cta svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
     .btn-wa { display: flex; width: 100%; padding: 0.75rem; background: none; border: 1.5px solid #25D366; color: #25D366; border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer; text-decoration: none; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; margin-bottom: 0.6rem; }
     .btn-wa:hover { background: #25D366; color: #fff; }
@@ -531,7 +542,7 @@
     /* ── AGENCY CARDS ────────────────────────────────────────── */
     .agencies-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; }
     .agency-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 0.6rem; transition: border-color 0.2s, box-shadow 0.2s; }
-    .agency-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,106,255,0.08); }
+    .agency-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(19,19,24,0.08); }
     .agency-card.primary { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 3%, var(--bg-card)); }
     .agency-card-top { display: flex; align-items: center; gap: 0.75rem; }
     .agent-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #B8A07E, #6E5847); color: #fff; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -769,46 +780,32 @@
         <div class="detail-section" id="neighborhoodSection" style="display:none">
           <div class="section-heading">Vecindario</div>
           <div class="neighborhood-grid">
-            <div class="neighborhood-tile" id="neighborhoodWalk">
+            <!-- Two truthful tiles: explore-by-sector + explore-by-city.
+                 Round-1 shipped 4 placeholder tiles ("Próximamente")
+                 which the round-2 audit flagged as reading "broken"
+                 rather than "forthcoming." When walk-score / transit
+                 / POI feeds wire in, add tiles back here — never
+                 ship a tile until its data is real. -->
+            <a class="neighborhood-tile" id="neighborhoodSector" href="#" rel="noopener">
               <div class="neighborhood-tile-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
               </div>
               <div class="neighborhood-tile-body">
-                <div class="neighborhood-tile-label">A pie</div>
-                <div class="neighborhood-tile-value">Caminable</div>
-                <div class="neighborhood-tile-detail">Tiendas y restaurantes cerca</div>
+                <div class="neighborhood-tile-label">Sector</div>
+                <div class="neighborhood-tile-value" id="sectorValue">—</div>
+                <div class="neighborhood-tile-detail">Ver más propiedades en el sector →</div>
               </div>
-            </div>
-            <div class="neighborhood-tile" id="neighborhoodTransit">
+            </a>
+            <a class="neighborhood-tile" id="neighborhoodCity" href="#" rel="noopener">
               <div class="neighborhood-tile-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 2c-4.42 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5V21h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-7H6V6h5v4zm5.5 7c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 10h-5V6h5v4z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg>
               </div>
               <div class="neighborhood-tile-body">
-                <div class="neighborhood-tile-label">Transporte</div>
-                <div class="neighborhood-tile-value" id="transitValue">Próximamente</div>
-                <div class="neighborhood-tile-detail">Líneas y paradas cercanas</div>
+                <div class="neighborhood-tile-label">Ciudad</div>
+                <div class="neighborhood-tile-value" id="cityValue">—</div>
+                <div class="neighborhood-tile-detail">Ver más propiedades en la ciudad →</div>
               </div>
-            </div>
-            <div class="neighborhood-tile" id="neighborhoodSchools">
-              <div class="neighborhood-tile-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
-              </div>
-              <div class="neighborhood-tile-body">
-                <div class="neighborhood-tile-label">Escuelas</div>
-                <div class="neighborhood-tile-value" id="schoolsValue">Próximamente</div>
-                <div class="neighborhood-tile-detail">Centros educativos cercanos</div>
-              </div>
-            </div>
-            <div class="neighborhood-tile" id="neighborhoodSafety">
-              <div class="neighborhood-tile-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-              </div>
-              <div class="neighborhood-tile-body">
-                <div class="neighborhood-tile-label">Seguridad</div>
-                <div class="neighborhood-tile-value" id="safetyValue">Próximamente</div>
-                <div class="neighborhood-tile-detail">Datos del sector</div>
-              </div>
-            </div>
+            </a>
           </div>
         </div>
 
@@ -2665,20 +2662,36 @@
     // Map (Apple MapKit JS)
     document.getElementById('addressLine').textContent = l.address || '';
 
-    // Neighborhood scaffold — surface when we have a city or coords.
-    // Real walk/transit/school data wires in later from Mapbox or
-    // similar; this just gives the section structure now so the
-    // detail page already feels complete.
+    // Neighborhood — two truthful tiles linking to filtered search.
+    // Round-2 audit replaced the four "Próximamente" placeholders
+    // with what we *actually* know: the listing's sector and city.
+    // Each tile becomes a NavigationLink to /comprar pre-filtered.
     const neighSection = document.getElementById('neighborhoodSection');
-    if (neighSection && (l.city || l.sector || (l.lat && l.lng))) {
+    if (neighSection && (l.city || l.sector)) {
       neighSection.style.display = '';
-      const where = l.sector || l.city || 'el sector';
-      const transitEl = document.getElementById('transitValue');
-      const schoolsEl = document.getElementById('schoolsValue');
-      const safetyEl  = document.getElementById('safetyValue');
-      if (transitEl) transitEl.textContent = where;
-      if (schoolsEl) schoolsEl.textContent = where;
-      if (safetyEl)  safetyEl.textContent  = where;
+      const sectorTile = document.getElementById('neighborhoodSector');
+      const cityTile   = document.getElementById('neighborhoodCity');
+      const sectorVal  = document.getElementById('sectorValue');
+      const cityVal    = document.getElementById('cityValue');
+
+      if (sectorTile && sectorVal) {
+        if (l.sector) {
+          sectorVal.textContent = l.sector;
+          // Best-effort: pre-filter /comprar with the sector as
+          // the search query. Falls back to /comprar if no match.
+          sectorTile.href = '/comprar?q=' + encodeURIComponent(l.sector);
+        } else {
+          sectorTile.style.display = 'none';
+        }
+      }
+      if (cityTile && cityVal) {
+        if (l.city) {
+          cityVal.textContent = l.city + (l.province ? ', ' + l.province : '');
+          cityTile.href = '/ciudad/' + encodeURIComponent(l.city.toLowerCase());
+        } else {
+          cityTile.style.display = 'none';
+        }
+      }
     }
 
     if (l.lat && l.lng) {

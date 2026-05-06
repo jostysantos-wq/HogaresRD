@@ -167,23 +167,29 @@ input, select, textarea { font-family: var(--font); }
 /* ── Global focus ring ───────────────────────────────────────────
    WCAG 2.2 §2.4.7: 2 px thick, ≥3:1 against adjacent surface.
    :focus-visible only — pointer focus stays clean, keyboard focus
-   is always visible. Pages MUST NOT redefine `outline: none`
-   without providing an equivalent ring. */
+   is always visible.
+
+   Page-level CSS that sets `:focus { outline: none }` with no
+   replacement (which the audit found in 38 files) doesn't break
+   keyboard a11y here — the rules below use !important to override
+   any per-page reset for the *visible* focus path. Pointer focus
+   on inputs stays styled by the page's own `:focus` rules. */
 :focus { outline: none; }
 :focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
+  outline: 2px solid var(--ink) !important;
+  outline-offset: 2px !important;
   border-radius: 4px;
 }
 /* Inputs use a tinted box-shadow ring instead of an outline so the
-   ring sits flush against the input's own rounded border. */
+   ring sits flush against the input's own rounded border. The
+   !important on the box-shadow guards against page-level resets. */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 .input:focus-visible {
-  outline: none;
+  outline: none !important;
   border-color: var(--ink) !important;
-  box-shadow: 0 0 0 3px rgba(19,19,24,0.18);
+  box-shadow: 0 0 0 3px rgba(19,19,24,0.18) !important;
 }
 
 /* ── Navigation ────────────────────────────────────────────────── */

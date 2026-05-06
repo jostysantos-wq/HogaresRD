@@ -114,41 +114,41 @@
         </ul>
       </div>
 
-      <div class="error-msg" id="errorMsg"></div>
+      <div class="error-msg" id="errorMsg" role="alert" aria-live="polite"></div>
 
-      <form id="inmobiliariaForm" novalidate>
+      <form id="inmobiliariaForm" novalidate aria-label="Registro de inmobiliaria">
         <div class="section-divider">Contacto Responsable</div>
         <div class="field">
-          <label>Nombre completo del responsable *</label>
-          <input type="text" id="name" placeholder="Juan Pérez" required autocomplete="name" />
+          <label for="name">Nombre completo del responsable *</label>
+          <input type="text" id="name" name="name" placeholder="Juan Pérez" required autocomplete="name" minlength="2" aria-required="true" />
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Correo electrónico *</label>
-            <input type="email" id="email" placeholder="info@inmobiliaria.com" required autocomplete="email" />
+            <label for="email">Correo electrónico *</label>
+            <input type="email" id="email" name="email" placeholder="info@inmobiliaria.com" required autocomplete="email" inputmode="email" aria-required="true" />
           </div>
           <div class="field">
-            <label>Teléfono *</label>
-            <input type="tel" id="phone" placeholder="+1 (809) 000-0000" required />
+            <label for="phone">Teléfono *</label>
+            <input type="tel" id="phone" name="phone" placeholder="+1 (809) 000-0000" required autocomplete="tel" inputmode="tel" pattern="[0-9\-\+\s\(\)]{7,}" aria-required="true" />
           </div>
         </div>
 
         <div class="section-divider">Datos de la Empresa</div>
         <div class="field">
-          <label>Nombre de la empresa *</label>
-          <input type="text" id="companyName" placeholder="Ej. Inmobiliaria Elite RD" required />
+          <label for="companyName">Nombre de la empresa *</label>
+          <input type="text" id="companyName" name="companyName" placeholder="Ej. Inmobiliaria Elite RD" required aria-required="true" />
         </div>
         <div class="field">
-          <label>Número de licencia MIREX *</label>
-          <input type="text" id="licenseNumber" placeholder="MIREX-2024-000000" required />
-          <p class="hint">Licencia emitida por el Ministerio de Relaciones Exteriores</p>
+          <label for="licenseNumber">Número de licencia MIREX *</label>
+          <input type="text" id="licenseNumber" name="licenseNumber" placeholder="MIREX-2024-000000" required aria-required="true" aria-describedby="licenseHint" />
+          <p class="hint" id="licenseHint">Licencia emitida por el Ministerio de Relaciones Exteriores</p>
         </div>
 
         <div class="section-divider">Contraseña</div>
         <div class="field-row">
           <div class="field">
-            <label>Contraseña *</label>
-            <input type="password" id="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" />
+            <label for="password">Contraseña *</label>
+            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" aria-required="true" aria-describedby="pwStrengthWrap" />
             <div class="pw-strength-wrap" id="pwStrengthWrap" style="margin-top:6px;display:none;">
               <div style="display:flex;gap:3px;margin-bottom:5px;">
                 <div class="pw-bar" id="pwBar1" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
@@ -166,8 +166,8 @@
             </div>
           </div>
           <div class="field">
-            <label>Confirmar contraseña *</label>
-            <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" />
+            <label for="confirmPassword">Confirmar contraseña *</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" minlength="8" aria-required="true" />
           </div>
         </div>
 
@@ -190,6 +190,7 @@
   <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
 
   <script src="/js/auth.js"></script>
+  <script src="/js/password-strength.js"></script>
   <script>
     const html = document.documentElement;
     html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
@@ -204,49 +205,8 @@
     }
     redirectIfAuth();
 
-    // ── Password strength meter ────────────────────────────────────
-    (function initPwStrength() {
-      const input = document.getElementById('password') || document.getElementById('newPassword');
-      if (!input) return;
-      const wrap  = document.getElementById('pwStrengthWrap');
-      const bars  = [1,2,3,4].map(i => document.getElementById('pwBar' + i));
-      const rules = {
-        len:  document.getElementById('rule-len'),
-        up:   document.getElementById('rule-up'),
-        low:  document.getElementById('rule-low'),
-        num:  document.getElementById('rule-num'),
-        spec: document.getElementById('rule-spec'),
-      };
-      const colors = ['#ef4444','#f97316','#eab308','#22c55e'];
-
-      function update() {
-        const v = input.value;
-        if (!v) { if (wrap) wrap.style.display = 'none'; return; }
-        if (wrap) wrap.style.display = 'block';
-
-        const checks = {
-          len:  v.length >= 8,
-          up:   /[A-Z]/.test(v),
-          low:  /[a-z]/.test(v),
-          num:  /[0-9]/.test(v),
-          spec: /[^A-Za-z0-9]/.test(v),
-        };
-        const score = Object.values(checks).filter(Boolean).length; // 0-5
-
-        Object.entries(checks).forEach(([k, ok]) => {
-          if (!rules[k]) return;
-          rules[k].textContent = (ok ? '✓ ' : '✗ ') + rules[k].textContent.slice(2);
-          rules[k].style.color = ok ? '#22c55e' : '#94a3b8';
-        });
-
-        // 4 bars: light up progressively
-        const level = Math.max(0, score - 1); // 0-4
-        bars.forEach((b, i) => {
-          b.style.background = i < level ? colors[Math.min(level - 1, 3)] : '#e0e8f5';
-        });
-      }
-      input.addEventListener('input', update);
-    })();
+    // Password strength meter (shared module — see /js/password-strength.js)
+    HogaresPwStrength.attach(document.getElementById('password') ? 'password' : 'newPassword');
 
     function unlockTc() {
       const cb = document.getElementById('tcAccept');
@@ -275,15 +235,7 @@
         err.textContent = 'Todos los campos son requeridos.';
         return err.classList.add('visible');
       }
-      function validatePw(p) {
-        if (!p || p.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
-        if (!/[A-Z]/.test(p)) return 'Incluye al menos una letra mayúscula';
-        if (!/[a-z]/.test(p)) return 'Incluye al menos una letra minúscula';
-        if (!/[0-9]/.test(p)) return 'Incluye al menos un número';
-        if (!/[^A-Za-z0-9]/.test(p)) return 'Incluye al menos un carácter especial (!@#$%...)';
-        return null;
-      }
-      const pwErr = validatePw(password);
+      const pwErr = HogaresPwStrength.validate(password);
       if (pwErr) {
         err.textContent = pwErr;
         return err.classList.add('visible');

@@ -20,15 +20,17 @@
       --sb-text: #6B7280;
       --sb-hover: #F4F6FA;
       /*
-       * Admin dashboard local palette — overrides the global cream/ink
-       * tokens with the dashboard's own blue accent. Editing here changes
-       * the dashboard's identity color globally for this page.
+       * Admin dashboard inherits the global ink palette so the brand
+       * stays consistent across the funnel. Round-2 audit dropped the
+       * legacy blue override (was --accent: #006AFF). The admin
+       * sidebar's "active row" tint and its own accent now both
+       * point at ink.
        */
-      --sb-active-bg: #006AFF;
+      --sb-active-bg: #131318;
       --sb-section-label: #94A3B8;
-      --accent: #006AFF;
-      --accent-hover: #0049CC;
-      --accent-light: #EBF3FF;
+      --accent: #131318;
+      --accent-hover: #000000;
+      --accent-light: rgba(19,19,24,0.06);
       --success: #00A878;
       --danger: #E53E3E;
       --warning: #F59E0B;
@@ -2492,7 +2494,7 @@
             m.setCameraDistanceAnimated(4000);
             m.addAnnotation(new mapkit.MarkerAnnotation(
               new mapkit.Coordinate(lat, lng),
-              { color: '#006AFF', displayPriority: mapkit.Annotation.DisplayPriority.Required }
+              { color: '#131318', displayPriority: mapkit.Annotation.DisplayPriority.Required }
             ));
             adminMaps[s.id] = m;
           });

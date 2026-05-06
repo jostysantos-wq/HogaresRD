@@ -800,7 +800,7 @@
     .step-dot svg { width: 9px; height: 9px; fill: #fff; }
     .workflow-step.done .step-dot { background: var(--green); border-color: var(--green); }
     .workflow-step.done::before, .workflow-step.done::after { background: var(--green); }
-    .workflow-step.current .step-dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.18); }
+    .workflow-step.current .step-dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.22); }
     .workflow-step.current::before { background: var(--green); }
     .step-label { font-size: 0.58rem; color: var(--text-muted); margin-top: 0.3rem; text-align: center; white-space: nowrap; line-height: 1.2; }
     .workflow-step.current .step-label { color: var(--accent); font-weight: 600; }
@@ -937,7 +937,7 @@
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.35rem; letter-spacing: 0.02em; text-transform: uppercase; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem 0.85rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; background: var(--bg-card); color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
 
     /* ── DOCS ─────────────────────────────────────────────────── */
     .doc-check-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
@@ -1005,7 +1005,7 @@
     .tl-type.ev-tour     { background: #ECFDF5; color: #059669; }
     .tl-note-input { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
     .tl-note-input input { flex: 1; padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: var(--bg-card); color: var(--text); font-family: inherit; }
-    .tl-note-input input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .tl-note-input input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
 
     /* ── EMPTY STATE ──────────────────────────────────────────── */
     .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
@@ -1077,7 +1077,7 @@
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: var(--bg-section); }
     .search-bar { width: 100%; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; background: var(--bg-card); color: var(--text); font-family: inherit; margin-bottom: 1rem; transition: border-color 0.15s, box-shadow 0.15s; }
-    .search-bar:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .search-bar:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
     .pagination { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 1.25rem; }
     .pagination .btn { min-width: 80px; justify-content: center; }
     .pagination span { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
@@ -1106,13 +1106,13 @@
     .audit-item .audit-link { color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 500; }
     .filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
     .filter-row select { padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem; background: var(--bg-card); color: var(--text); font-family: inherit; }
-    .filter-row select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .filter-row select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
     .section-title { font-size: 0.92rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: -0.01em; }
     .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
     .commission-input-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
     .commission-input-row label { font-size: 0.82rem; font-weight: 500; white-space: nowrap; }
     .commission-input-row input { width: 80px; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; background: var(--bg-card); color: var(--text); text-align: center; font-family: inherit; }
-    .commission-input-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .commission-input-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
 
     /* ── Listing Analytics (Mis Propiedades) ─────────────────── */
     .la-range-row { display: flex; gap: 0.4rem; margin-bottom: 1.25rem; }
@@ -1267,14 +1267,14 @@
       font-size: 0.85rem; background: var(--bg-card); color: var(--text); font-family: inherit;
     }
     .pp-form select:focus, .pp-form input:focus, .pp-form textarea:focus
-      { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+      { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
     .pp-form textarea { min-height: 60px; resize: vertical; }
 
     .pp-calc { background: var(--accent-light); border: 1.5px solid var(--accent); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1.1rem; }
     .pp-calc-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.4rem; }
     .pp-calc-title svg { width: 12px; height: 12px; fill: var(--accent); }
     .pp-calc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem; }
-    .pp-calc-preview { font-size: 0.82rem; color: var(--accent); font-weight: 600; padding: 0.5rem 0.75rem; background: rgba(37,99,235,0.07); border-radius: 6px; margin-bottom: 0.6rem; min-height: 2rem; display: flex; align-items: center; gap: 0.5rem; }
+    .pp-calc-preview { font-size: 0.82rem; color: var(--accent); font-weight: 600; padding: 0.5rem 0.75rem; background: rgba(19,19,24,0.07); border-radius: 6px; margin-bottom: 0.6rem; min-height: 2rem; display: flex; align-items: center; gap: 0.5rem; }
     .pp-calc-preview svg { width: 13px; height: 13px; fill: var(--accent); flex-shrink: 0; }
     .pp-calc-preview.empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
     .pp-divider { display: flex; align-items: center; gap: 0.65rem; margin: 0.85rem 0 0.7rem; }
@@ -1282,9 +1282,9 @@
     .pp-divider::before, .pp-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
     /* ── Multi-role UI ──────────────────────────────────────── */
     .role-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.18rem 0.55rem; border-radius: 10px; }
-    .role-badge.broker      { background: rgba(37,99,235,0.18); color: #93c5fd; }
+    .role-badge.broker      { background: rgba(19,19,24,0.22); color: #93c5fd; }
     .role-badge.inmobiliaria { background: rgba(124,58,237,0.18); color: #c4b5fd; }
-    .role-badge.agency      { background: rgba(37,99,235,0.18); color: #93c5fd; }
+    .role-badge.agency      { background: rgba(19,19,24,0.22); color: #93c5fd; }
 
     /* Affiliation banner (broker) */
     .aff-banner { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 1rem; border-radius: 8px; margin-bottom: 0.85rem; font-size: 0.78rem; }
@@ -1475,7 +1475,7 @@
 
     .export-date-row { display: flex; gap: 0.75rem; }
     .export-date-input { display: flex; align-items: center; gap: 0.5rem; flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 0 0.75rem; background: var(--bg-card); transition: border-color 0.15s; }
-    .export-date-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .export-date-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(19,19,24,0.14); }
     .export-date-icon { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
     .export-date-input input[type="date"] { flex: 1; border: none; background: transparent; color: var(--text); font-size: 0.85rem; font-family: inherit; padding: 0.5rem 0; outline: none; }
 
@@ -5381,7 +5381,7 @@
       e.preventDefault();
       e.stopPropagation();
       zone.style.borderColor = 'var(--accent)';
-      zone.style.background  = 'var(--accent-light, rgba(0,106,255,0.08))';
+      zone.style.background  = 'var(--accent-light, rgba(19,19,24,0.08))';
     }));
     ['dragleave', 'dragend', 'drop'].forEach(ev => zone.addEventListener(ev, (e) => {
       e.preventDefault();
