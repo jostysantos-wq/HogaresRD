@@ -237,14 +237,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Report-only CSP. Browsers log violations to /api/csp-report but won't
-// block anything. After a week of clean logs, flip CSP_ENFORCE=1 in .env
-// to switch the header to `Content-Security-Policy` (enforcing mode).
+// Enforcing CSP. Set CSP_REPORT_ONLY=1 to switch back to report-only.
+//
+// Round-1 security audit fixes:
+//   - L-8: img-src no longer allows plain http:. Same-origin uploads
+//     work via 'self', Unsplash + chart APIs need https: (the long
+//     tail of agent-supplied photo URLs lives on https CDNs), but
+//     `http:` was an unnecessary downgrade vector that let attackers
+//     embed mixed-content trackers via stored XSS.
+//   - M-2 (partial): 'unsafe-eval' removed from script-src — confirmed
+//     zero eval()/new Function() use across public/. 'unsafe-inline'
+//     stays for now; a proper nonce migration is a separate sprint.
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://cdn.apple-mapkit.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://cdn.apple-mapkit.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.openstreetmap.org https://cdn.apple-mapkit.com",
-  "img-src 'self' data: blob: https: http:",
+  "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://api.stripe.com https://www.facebook.com https://*.facebook.com https://graph.facebook.com https://*.openstreetmap.org https://nominatim.openstreetmap.org https://*.apple-mapkit.com https://*.ls.apple.com",
   "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
@@ -1197,6 +1205,51 @@ function generateListingId() {
   return id;
 }
 
+// SECURITY (round-1 audit fix H-1): /submit accepts unauthenticated
+// input; the admin queue renders it. Even with client-side escaping
+// in admin.html, defense in depth: strip angle brackets from short
+// text fields here so payloads never reach storage. Long-form fields
+// (description) keep their content but get clamped + the admin
+// renderer escapes them on output.
+function _sanitizeShortText(v, maxLen) {
+  if (typeof v !== 'string') return '';
+  // Strip ASCII control chars 0x00-0x1F, 0x7F, plus < and > (HTML
+  // delimiters). Then clamp length.
+  let out = '';
+  for (let i = 0; i < v.length; i++) {
+    const c = v.charCodeAt(i);
+    if (c < 0x20 || c === 0x7F) continue;
+    if (c === 0x3C || c === 0x3E) continue; // < >
+    out += v[i];
+    if (out.length >= maxLen) break;
+  }
+  return out;
+}
+function _sanitizeLongText(v, maxLen) {
+  if (typeof v !== 'string') return '';
+  // Allow LF (0x0A) and TAB (0x09) so descriptions can break lines.
+  // Strip everything else under 0x20 + DEL + angle brackets.
+  let out = '';
+  for (let i = 0; i < v.length; i++) {
+    const c = v.charCodeAt(i);
+    if (c < 0x20 && c !== 0x0A && c !== 0x09) continue;
+    if (c === 0x7F) continue;
+    if (c === 0x3C || c === 0x3E) continue;
+    out += v[i];
+    if (out.length >= maxLen) break;
+  }
+  return out;
+}
+function _sanitizeAgencies(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, 10).map(a => ({
+    name:  _sanitizeShortText(a && a.name,  120),
+    agent: _sanitizeShortText(a && a.agent, 120),
+    phone: _sanitizeShortText(a && a.phone,  40),
+    email: _sanitizeShortText(a && a.email, 120),
+  }));
+}
+
 app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
   const body = req.body;
   const isClaim = body.submission_type === 'agency_claim';
@@ -1222,50 +1275,54 @@ app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
     }
   }
 
+  // Sanitize all user-supplied text fields up front (audit fix H-1).
+  // Short fields strip angle brackets + control chars; the long
+  // description preserves \n + \t but still strips angle brackets.
   const submission = {
     id:              generateListingId(),
     creator_user_id: req.user?.sub || null,
     submission_type: isClaim ? 'agency_claim' : 'new_property',
     // Agency claim fields
-    claim_listing_id: isClaim ? (body.claim_listing_id || '') : undefined,
+    claim_listing_id: isClaim ? _sanitizeShortText(body.claim_listing_id, 50) : undefined,
     // Property fields (only for new_property)
-    title:       isClaim ? '' : (body.title       || ''),
-    type:        isClaim ? '' : (body.type         || ''),
-    condition:   isClaim ? '' : (body.condition    || ''),
-    description: isClaim ? '' : (body.description  || ''),
-    price:       isClaim ? '' : (body.price        || ''),
+    title:       isClaim ? '' : _sanitizeShortText(body.title, 200),
+    type:        isClaim ? '' : _sanitizeShortText(body.type, 40),
+    condition:   isClaim ? '' : _sanitizeShortText(body.condition, 40),
+    description: isClaim ? '' : _sanitizeLongText(body.description, 6000),
+    price:       isClaim ? '' : _sanitizeShortText(String(body.price || ''), 20),
     // Optional upper bound — lets projects advertise a price RANGE
     // ("from $90,000 to $150,000") without locking in a single price.
     // Empty string when the listing is a single unit with one price.
-    priceMax:    isClaim ? '' : (body.priceMax     || ''),
-    area_const:  isClaim ? '' : (body.area_const   || ''),
-    area_land:   isClaim ? '' : (body.area_land    || ''),
-    bedrooms:    isClaim ? '' : (body.bedrooms     || ''),
-    bathrooms:   isClaim ? '' : (body.bathrooms    || ''),
-    parking:     isClaim ? '' : (body.parking      || ''),
-    province:    isClaim ? '' : (body.province     || ''),
-    city:        isClaim ? '' : (body.city         || ''),
-    sector:      isClaim ? '' : (body.sector       || ''),
-    address:     isClaim ? '' : (body.address      || ''),
-    amenities:          isClaim ? [] : (body.amenities         || []),
-    construction_company: isClaim ? '' : (body.construction_company || ''),
-    units_total:        isClaim ? '' : (body.units_total       || ''),
-    units_available:    isClaim ? '' : (body.units_available   || ''),
-    delivery_date:      isClaim ? '' : (body.delivery_date     || ''),
-    project_stage:      isClaim ? '' : (body.project_stage     || ''),
+    priceMax:    isClaim ? '' : _sanitizeShortText(String(body.priceMax || ''), 20),
+    area_const:  isClaim ? '' : _sanitizeShortText(String(body.area_const || ''), 20),
+    area_land:   isClaim ? '' : _sanitizeShortText(String(body.area_land || ''), 20),
+    bedrooms:    isClaim ? '' : _sanitizeShortText(String(body.bedrooms || ''), 10),
+    bathrooms:   isClaim ? '' : _sanitizeShortText(String(body.bathrooms || ''), 10),
+    parking:     isClaim ? '' : _sanitizeShortText(String(body.parking || ''), 10),
+    province:    isClaim ? '' : _sanitizeShortText(body.province, 80),
+    city:        isClaim ? '' : _sanitizeShortText(body.city, 80),
+    sector:      isClaim ? '' : _sanitizeShortText(body.sector, 80),
+    address:     isClaim ? '' : _sanitizeShortText(body.address, 200),
+    amenities:          isClaim ? [] : (Array.isArray(body.amenities) ? body.amenities.slice(0, 50).map(a => _sanitizeShortText(a, 60)).filter(Boolean) : []),
+    construction_company: isClaim ? '' : _sanitizeShortText(body.construction_company, 120),
+    units_total:        isClaim ? '' : _sanitizeShortText(String(body.units_total || ''), 10),
+    units_available:    isClaim ? '' : _sanitizeShortText(String(body.units_available || ''), 10),
+    delivery_date:      isClaim ? '' : _sanitizeShortText(String(body.delivery_date || ''), 20),
+    project_stage:      isClaim ? '' : _sanitizeShortText(body.project_stage, 60),
     unit_types:         isClaim ? [] : (Array.isArray(body.unit_types) ? body.unit_types : []),
     blueprints:         isClaim ? [] : (Array.isArray(body.blueprints) ? body.blueprints : (body.blueprints ? [body.blueprints] : [])),
     images:             isClaim ? [] : (Array.isArray(body.images) ? body.images : []),
-    tags:               isClaim ? [] : (Array.isArray(body.tags) ? body.tags : (body.tags ? [body.tags] : [])),
-    lat:         isClaim ? '' : (body.lat          || ''),
-    lng:         isClaim ? '' : (body.lng          || ''),
-    // Agencies (present in both modes)
-    agencies:    Array.isArray(body.agencies) ? body.agencies : [],
+    tags:               isClaim ? [] : (Array.isArray(body.tags) ? body.tags.slice(0, 20).map(t => _sanitizeShortText(t, 40)).filter(Boolean) : (body.tags ? [_sanitizeShortText(body.tags, 40)] : [])),
+    lat:         isClaim ? '' : _sanitizeShortText(String(body.lat || ''), 30),
+    lng:         isClaim ? '' : _sanitizeShortText(String(body.lng || ''), 30),
+    // Agencies (present in both modes) — name/agent/phone/email come
+    // from arbitrary user input, so each field is sanitized.
+    agencies:    _sanitizeAgencies(body.agencies),
     // Submitter contact
-    name:        body.name        || '',
-    email:       body.email       || '',
-    phone:       body.phone       || '',
-    role:        body.role        || '',
+    name:        _sanitizeShortText(body.name, 120),
+    email:       _sanitizeShortText(body.email, 120),
+    phone:       _sanitizeShortText(body.phone, 40),
+    role:        _sanitizeShortText(body.role, 30),
     status:      'pending',
     submittedAt: new Date().toISOString(),
   };

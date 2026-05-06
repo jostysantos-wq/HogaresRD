@@ -11,19 +11,25 @@
  *   // r.transaction.{transactionId, originalTransactionId, productId,
  *   //                bundleId, expiresDate, environment}
  *
- * Caveats / TODO:
- *   - Full X.509 chain validation against Apple's root CA
- *     (AppleRootCA-G3.cer) is NOT performed. We verify the JWS signature
- *     against the leaf cert and best-effort string-match the leaf's
- *     issuer for "Apple". A determined attacker who can mint a cert with
- *     an "Apple"-looking subject could in principle slip past us.
- *   - Revocation (CRL/OCSP) is not checked.
+ * Round-1 security audit fix M-3:
+ *   - Full X.509 chain validation against Apple's pinned Root CA G3
+ *     IS now performed. Each cert in x5c is verified against the next,
+ *     and the topmost cert must chain to the embedded Apple Root.
+ *   - The "issuer string-match" heuristic is gone — the chain itself
+ *     is the proof now, not the human-readable issuer label.
+ *
+ * Still TODO:
+ *   - Revocation (CRL/OCSP) is not checked. Apple does not publish
+ *     CRLs for the StoreKit signing chain, so this is treated as
+ *     acceptable for the StoreKit-2 use case.
  *
  *  Spec refs:
  *    - StoreKit 2 JWSTransaction:
  *      https://developer.apple.com/documentation/appstoreserverapi/jwstransaction
  *    - App Store Server API – signed payloads:
  *      https://developer.apple.com/documentation/appstoreserverapi/jws-format
+ *    - Apple Root CA - G3 (PEM):
+ *      https://www.apple.com/certificateauthority/AppleRootCA-G3.cer
  */
 
 'use strict';
@@ -34,6 +40,29 @@ const EXPECTED_BUNDLE_ID = () =>
   process.env.APPLE_BUNDLE_ID || 'com.josty.hogaresrd';
 
 const PRODUCT_ID_PREFIX = 'com.josty.hogaresrd.';
+
+// Apple Root CA - G3, the trust anchor for StoreKit 2 / App Store
+// Server signed payloads. Publicly distributed at
+// https://www.apple.com/certificateauthority/AppleRootCA-G3.cer
+// SHA-256 fingerprint:
+//   63343ABFB89A6A03EBB57E9B3F5FA7BE7C4F5C756F3017B3A8C488C3653E9179
+const APPLE_ROOT_CA_G3_PEM = `-----BEGIN CERTIFICATE-----
+MIICQzCCAcmgAwIBAgIILcX8iNLFS5UwCgYIKoZIzj0EAwMwZzEbMBkGA1UEAwwS
+QXBwbGUgUm9vdCBDQSAtIEczMSYwJAYDVQQLDB1BcHBsZSBDZXJ0aWZpY2F0aW9u
+IEF1dGhvcml0eTETMBEGA1UECgwKQXBwbGUgSW5jLjELMAkGA1UEBhMCVVMwHhcN
+MTQwNDMwMTgxOTA2WhcNMzkwNDMwMTgxOTA2WjBnMRswGQYDVQQDDBJBcHBsZSBS
+b290IENBIC0gRzMxJjAkBgNVBAsMHUFwcGxlIENlcnRpZmljYXRpb24gQXV0aG9y
+aXR5MRMwEQYDVQQKDApBcHBsZSBJbmMuMQswCQYDVQQGEwJVUzB2MBAGByqGSM49
+AgEGBSuBBAAiA2IABJjpLz1AcqTtkyJygRMc3RCV8cWjTnHcFBbZDuWmBSp3ZHtf
+TjjTuxxEtX/1H7YyYl3J6YRbTzBPEVoA/VhYDKX1DyxNB0cTddqXl5dvMVztK517
+IDvYuVTZXpmkOlEKMaNCMEAwHQYDVR0OBBYEFLuw3qFYM4iapIqZ3r6966/ayySr
+MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMDA2gA
+MGUCMQCD6cHEFl4aXTQY2e3v9GwOAEZLuN+yRhHFD/3meoyhpmvOwgPUnPWTxnS4
+at+qIxUCMG1mihDK1A3UT82NQz60imOlM27jbdoXt2QfyFMm+YhidDkLF1vLUagM
+6BgD56KyKA==
+-----END CERTIFICATE-----`;
+const APPLE_ROOT_CA_G3 = new crypto.X509Certificate(APPLE_ROOT_CA_G3_PEM);
+const APPLE_ROOT_FP    = APPLE_ROOT_CA_G3.fingerprint256;
 
 // ── base64url helpers (Node 16+ supports 'base64url' encoding natively) ──
 function base64UrlDecodeToBuffer(str) {
@@ -85,6 +114,60 @@ function joseToDer(joseSig) {
 }
 
 /**
+ * Verify an x5c certificate chain terminates at our pinned Apple
+ * Root CA G3. Each cert in the chain must be signed by the next, and
+ * the highest cert must either *be* the pinned root or be signed by it.
+ *
+ * Validity-period checks are run on every cert (rejects expired or
+ * not-yet-valid certs).
+ *
+ * @param {string[]} x5c  Base64-encoded DER certs, leaf first.
+ * @returns {{ ok: true, leaf: crypto.X509Certificate } | { ok: false, error: string }}
+ */
+function verifyChain(x5c) {
+  if (!Array.isArray(x5c) || x5c.length === 0) {
+    return { ok: false, error: 'empty x5c chain' };
+  }
+  let chain;
+  try {
+    chain = x5c.map(b64 => new crypto.X509Certificate(Buffer.from(b64, 'base64')));
+  } catch (e) {
+    return { ok: false, error: `x5c parse error: ${e.message}` };
+  }
+
+  const now = Date.now();
+  for (let i = 0; i < chain.length; i++) {
+    const c = chain[i];
+    const notBefore = Date.parse(c.validFrom);
+    const notAfter  = Date.parse(c.validTo);
+    if (Number.isFinite(notBefore) && notBefore > now) {
+      return { ok: false, error: `chain[${i}] not yet valid` };
+    }
+    if (Number.isFinite(notAfter) && notAfter < now) {
+      return { ok: false, error: `chain[${i}] expired` };
+    }
+  }
+
+  // Verify each cert was signed by the next one in the chain.
+  for (let i = 0; i < chain.length - 1; i++) {
+    if (!chain[i].verify(chain[i + 1].publicKey)) {
+      return { ok: false, error: `chain[${i}] signature does not verify against chain[${i + 1}]` };
+    }
+  }
+
+  // Top of chain must terminate at our pinned Apple Root.
+  const top = chain[chain.length - 1];
+  if (top.fingerprint256 === APPLE_ROOT_FP) {
+    return { ok: true, leaf: chain[0] };
+  }
+  // Otherwise, the top cert must be directly signed by the pinned root.
+  if (top.verify(APPLE_ROOT_CA_G3.publicKey)) {
+    return { ok: true, leaf: chain[0] };
+  }
+  return { ok: false, error: 'chain does not terminate at pinned Apple Root CA G3' };
+}
+
+/**
  * Verify an Apple StoreKit 2 signedTransactionInfo JWS.
  *
  * @param {string} signedTransactionJWS  JWS in compact form: header.payload.signature
@@ -115,18 +198,12 @@ async function verifyAppleTransaction(signedTransactionJWS) {
     return { valid: false, error: 'JWS header missing x5c certificate chain' };
   }
 
-  // ── 2. Build leaf cert public key + best-effort issuer check ────
-  let leafCert;
-  try {
-    leafCert = new crypto.X509Certificate(Buffer.from(header.x5c[0], 'base64'));
-  } catch (e) {
-    return { valid: false, error: `JWS x5c[0] is not a valid X.509 certificate: ${e.message}` };
+  // ── 2. Pinned chain validation (audit fix M-3) ──────────────────
+  const chainResult = verifyChain(header.x5c);
+  if (!chainResult.ok) {
+    return { valid: false, error: `chain validation failed: ${chainResult.error}` };
   }
-
-  const issuer = String(leafCert.issuer || '');
-  if (!/Apple/i.test(issuer)) {
-    return { valid: false, error: `Leaf certificate issuer does not look like Apple: ${issuer}` };
-  }
+  const leafCert = chainResult.leaf;
 
   const publicKey = leafCert.publicKey;
   if (!publicKey) {

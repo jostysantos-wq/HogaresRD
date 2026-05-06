@@ -1,8 +1,21 @@
 const express      = require('express');
+const rateLimit    = require('express-rate-limit');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
 const { userAuth, optionalAuth } = require('./auth');
 const router       = express.Router();
+
+// Per-IP rate limit on read endpoints (audit fix L-5).
+// 120 requests / minute is generous for a real user paginating + map
+// panning; an automated scraper or DOS attempt is throttled in place.
+const _publicReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip preflight + HEAD checks
+  skip: (req) => req.method === 'OPTIONS' || req.method === 'HEAD',
+});
 
 // Cache favorite counts (refreshed every 60s to avoid scanning all users per request)
 let _favCache = {};
@@ -51,7 +64,7 @@ function capArray(arr, maxItems, maxLen) {
 // optionalAuth populates req.user when a token is present so the
 // `affiliated_to` filter (below) can verify the requester is authorized
 // to query that user's affiliation graph.
-router.get('/', optionalAuth, (req, res) => {
+router.get('/', _publicReadLimiter, optionalAuth, (req, res) => {
   const filters = {
     q:           req.query.q           || '',
     province:    req.query.province    || '',
@@ -205,7 +218,7 @@ router.get('/', optionalAuth, (req, res) => {
 });
 
 // GET /api/listings/trending — top 8 by combined score: total public views + recent auth views (3×)
-router.get('/trending', (req, res) => {
+router.get('/trending', _publicReadLimiter, (req, res) => {
   const since  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const events = store.getListingActivity(since);
 
@@ -243,7 +256,7 @@ router.get('/agent/:refToken', (req, res) => {
 // so the counts shown next to each option don't depend on whether
 // that option is currently selected (NN/G's "open faceted search"
 // pattern).
-router.get('/facets', (req, res) => {
+router.get('/facets', _publicReadLimiter, (req, res) => {
   const all = store.getListings().filter(l => l.status !== 'pending' && l.status !== 'rejected');
 
   const FACETS = {
@@ -296,7 +309,7 @@ router.get('/facets', (req, res) => {
 });
 
 // GET /api/agencies — list all agencies with listing counts
-router.get('/agencies', (req, res) => {
+router.get('/agencies', _publicReadLimiter, (req, res) => {
   const listings = store.getListings();
   const map = {};
   listings.forEach(l => {
@@ -316,7 +329,7 @@ router.get('/agencies', (req, res) => {
 // listings), this one queries the user table so the submit form can
 // surface actual accounts in a searchable dropdown — letting brokers
 // link a new listing to a specific inmobiliaria that has a user.
-router.get('/inmobiliarias', (req, res) => {
+router.get('/inmobiliarias', _publicReadLimiter, (req, res) => {
   const inm   = store.getUsersByRole ? store.getUsersByRole('inmobiliaria') : [];
   const cons  = store.getUsersByRole ? store.getUsersByRole('constructora') : [];
   const users = [...(inm || []), ...(cons || [])];
@@ -345,7 +358,7 @@ router.get('/inmobiliarias', (req, res) => {
 });
 
 // GET /api/listings/constructoras — list all construction companies with listing counts
-router.get('/constructoras', (req, res) => {
+router.get('/constructoras', _publicReadLimiter, (req, res) => {
   const listings = store.getListings();
   const map = {};
   listings.forEach(l => {
@@ -443,7 +456,7 @@ router.get('/agencies/:slug', (req, res) => {
 // Approved listings are visible to everyone. Non-approved listings
 // (pending / edits_requested / rejected) are only returned to their
 // owner or an admin so the owner can re-edit & resubmit them.
-router.get('/:id', (req, res) => {
+router.get('/:id', _publicReadLimiter, (req, res) => {
   const listing = store.getListingById(req.params.id);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
@@ -569,7 +582,7 @@ router.get('/:id/like', userAuth, (req, res) => {
 });
 
 // POST /api/listings/:id/inquiry — send client inquiry to all affiliated agencies
-const rateLimit = require('express-rate-limit');
+// (rateLimit already imported at the top of this file).
 const inquiryLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: false, legacyHeaders: false,
   message: { error: 'Demasiadas consultas. Intenta de nuevo en una hora.' } });
 router.post('/:id/inquiry', inquiryLimiter, async (req, res) => {

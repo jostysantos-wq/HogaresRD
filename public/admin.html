@@ -2251,17 +2251,22 @@
         const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
         const isPending = s.status === 'pending';
         const statusLabel = { pending: 'Pendiente', approved: 'Agregada', rejected: 'Rechazada' }[s.status] || s.status;
+        // SECURITY (round-1 audit fix H-1): every field below that
+        // originates from `body` of POST /submit must run through
+        // escapeHtml(). The agency_claim flow accepts unauthenticated
+        // input, so any unescaped interpolation is a stored-XSS sink
+        // executed in the admin's session.
         return `
-          <div class="sub-card" id="card-${s.id}" style="border-left:4px solid var(--purple);">
+          <div class="sub-card" id="card-${escapeHtml(s.id)}" style="border-left:4px solid var(--purple);">
             <div class="sub-card-header">
               <div class="sub-title-row">
                 <div class="sub-title">Solicitud de Agencia</div>
                 <div class="sub-meta">
-                  <span>Para anuncio ID: <strong style="font-family:monospace;">${s.claim_listing_id || '—'}</strong></span>
-                  <span>${date}</span>
+                  <span>Para anuncio ID: <strong style="font-family:monospace;">${escapeHtml(s.claim_listing_id || '—')}</strong></span>
+                  <span>${escapeHtml(date)}</span>
                 </div>
               </div>
-              <span class="status-badge status-${s.status}">${statusLabel}</span>
+              <span class="status-badge status-${escapeHtml(s.status)}">${escapeHtml(statusLabel)}</span>
             </div>
             <div class="claim-card-body">
               ${agencies.length > 0 ? `
@@ -2269,24 +2274,24 @@
                 <div class="agency-cards" style="margin-bottom:1rem;">
                   ${agencies.map(a => `
                     <div class="agency-card">
-                      <strong>${a.name || '—'}</strong>
-                      ${a.agent ? `<span>${a.agent}</span>` : ''}
-                      ${a.phone ? `<span>${a.phone}</span>` : ''}
-                      ${a.email ? `<span>${a.email}</span>` : ''}
+                      <strong>${escapeHtml(a.name || '—')}</strong>
+                      ${a.agent ? `<span>${escapeHtml(a.agent)}</span>` : ''}
+                      ${a.phone ? `<span>${escapeHtml(a.phone)}</span>` : ''}
+                      ${a.email ? `<span>${escapeHtml(a.email)}</span>` : ''}
                     </div>`).join('')}
                 </div>` : '<p style="color:#4d6a8a;font-size:0.85rem;">Sin agencias incluidas.</p>'}
             </div>
             <div class="sub-card-footer">
               <div class="contact-info">
-                <strong>${s.name}</strong>
-                ${s.email} &nbsp;·&nbsp; ${s.phone}
+                <strong>${escapeHtml(s.name)}</strong>
+                ${escapeHtml(s.email)} &nbsp;·&nbsp; ${escapeHtml(s.phone)}
               </div>
               <div class="card-actions">
-                <button class="btn-merge ${isPending ? '' : 'btn-disabled'}" onclick="mergeAgency('${s.id}')">
+                <button class="btn-merge ${isPending ? '' : 'btn-disabled'}" onclick="mergeAgency('${encodeURIComponent(s.id)}')">
                   <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                   Agregar al Anuncio
                 </button>
-                <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
+                <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${encodeURIComponent(s.id)}')">
                   <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                   Rechazar
                 </button>
@@ -2296,7 +2301,7 @@
       }
 
       const amenities = Array.isArray(s.amenities) ? s.amenities : (s.amenities ? s.amenities.split(',') : []);
-      const amenityTags = amenities.map(a => `<span class="amenity-tag">${a.trim()}</span>`).join('');
+      const amenityTags = amenities.map(a => `<span class="amenity-tag">${escapeHtml(String(a).trim())}</span>`).join('');
       const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
       // Gate each admin action by status. Fresh submissions are the
       // only thing the admin can APPROVE — once edits have been
@@ -2313,13 +2318,16 @@
         rejected:         'Rechazada',
         edits_requested:  'Esperando Ediciones',
       }[s.status] || s.status;
+      // Use escapeHtml for the note (the previous one-line replace
+      // missed `&` and `"`, which are required for an attribute-context
+      // payload like `" onmouseover=alert(1) x="`).
       const editsNoteHTML = (s.status === 'edits_requested' && s.editsReason)
         ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:0.8rem 1rem;margin:0.6rem 0;font-size:0.82rem;color:#7c2d12;line-height:1.5;">
              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                <strong style="color:#92400E;">Esperando al agente</strong>
              </div>
-             <div style="margin-bottom:0.3rem;"><strong>Nota enviada:</strong> ${String(s.editsReason).replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+             <div style="margin-bottom:0.3rem;"><strong>Nota enviada:</strong> ${escapeHtml(s.editsReason).replace(/\n/g,'<br>')}</div>
              <div style="font-size:0.72rem;color:#92400E;font-style:italic;">El botón "Aprobar" se habilitará cuando el agente reenvíe la propiedad.</div>
            </div>`
         : '';
@@ -2330,10 +2338,10 @@
              <div class="agency-cards">
                ${agencies.map(a => `
                  <div class="agency-card">
-                   <strong>${a.name || '—'}</strong>
-                   ${a.agent ? `<span>${a.agent}</span>` : ''}
-                   ${a.phone ? `<span>${a.phone}</span>` : ''}
-                   ${a.email ? `<span>${a.email}</span>` : ''}
+                   <strong>${escapeHtml(a.name || '—')}</strong>
+                   ${a.agent ? `<span>${escapeHtml(a.agent)}</span>` : ''}
+                   ${a.phone ? `<span>${escapeHtml(a.phone)}</span>` : ''}
+                   ${a.email ? `<span>${escapeHtml(a.email)}</span>` : ''}
                  </div>`).join('')}
              </div>
            </div>` : '';
@@ -2343,36 +2351,40 @@
              <div class="admin-map" id="amap-${s.id}"></div>
            </div>` : '';
 
+      // SECURITY (round-1 audit fix H-1): every user-controlled field
+      // here passes through escapeHtml. Project-stage, construction
+      // company, sector, condition, etc. are all attacker-controlled
+      // when an unauthenticated submitter posts to /submit.
       return `
-        <div class="sub-card" id="card-${s.id}">
+        <div class="sub-card" id="card-${escapeHtml(s.id)}">
           <div class="sub-card-header">
             <div class="sub-title-row" style="display:flex;align-items:flex-start;gap:0.6rem;">
-              <input type="checkbox" class="sub-bulk-cb" data-id="${s.id}" onchange="updateSubBulkBar()" style="width:16px;height:16px;margin-top:4px;accent-color:var(--accent);flex-shrink:0;">
-              <div class="sub-title">${s.title}</div>
+              <input type="checkbox" class="sub-bulk-cb" data-id="${escapeHtml(s.id)}" onchange="updateSubBulkBar()" style="width:16px;height:16px;margin-top:4px;accent-color:var(--accent);flex-shrink:0;">
+              <div class="sub-title">${escapeHtml(s.title)}</div>
               <div class="sub-meta">
-                <span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${s.city}, ${s.province}</span>
-                <span>${s.type}</span>
-                <span>${date}</span>
-                <span style="font-family:monospace;font-size:0.72rem;color:#8aaac8;">ID: ${s.id}</span>
+                <span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${escapeHtml(s.city || '')}, ${escapeHtml(s.province || '')}</span>
+                <span>${escapeHtml(s.type || '')}</span>
+                <span>${escapeHtml(date)}</span>
+                <span style="font-family:monospace;font-size:0.72rem;color:#8aaac8;">ID: ${escapeHtml(s.id)}</span>
               </div>
             </div>
-            <span class="status-badge status-${s.status}">${statusLabel}</span>
+            <span class="status-badge status-${escapeHtml(s.status)}">${escapeHtml(statusLabel)}</span>
           </div>
           <div class="sub-card-body">
             <div class="sub-field"><label>Precio</label><span class="sub-price">$${Number(s.price).toLocaleString()}</span></div>
-            <div class="sub-field"><label>Habitaciones</label><span>${s.bedrooms || '—'} hab. · ${s.bathrooms || '—'} baños</span></div>
-            <div class="sub-field"><label>Área</label><span>${s.area_const ? s.area_const + ' m² const.' : '—'}</span></div>
-            <div class="sub-field"><label>Condición</label><span>${s.condition || '—'}</span></div>
-            <div class="sub-field"><label>Parqueos</label><span>${s.parking || '—'}</span></div>
-            <div class="sub-field"><label>Sector</label><span>${s.sector || '—'}</span></div>
+            <div class="sub-field"><label>Habitaciones</label><span>${escapeHtml(s.bedrooms || '—')} hab. · ${escapeHtml(s.bathrooms || '—')} baños</span></div>
+            <div class="sub-field"><label>Área</label><span>${s.area_const ? escapeHtml(s.area_const) + ' m² const.' : '—'}</span></div>
+            <div class="sub-field"><label>Condición</label><span>${escapeHtml(s.condition || '—')}</span></div>
+            <div class="sub-field"><label>Parqueos</label><span>${escapeHtml(s.parking || '—')}</span></div>
+            <div class="sub-field"><label>Sector</label><span>${escapeHtml(s.sector || '—')}</span></div>
           </div>
           ${s.construction_company || s.units_available ? `
             <div class="sub-card-body" style="border-top:1px solid #f0f4f9;background:#fafcff;">
-              ${s.construction_company ? `<div class="sub-field"><label>Constructora</label><span>${s.construction_company}</span></div>` : ''}
-              ${s.units_total ? `<div class="sub-field"><label>Unidades Totales</label><span>${s.units_total}</span></div>` : ''}
-              ${s.units_available ? `<div class="sub-field"><label>Disponibles</label><span style="font-weight:700;color:var(--success);">${s.units_available}</span></div>` : ''}
-              ${s.project_stage ? `<div class="sub-field"><label>Etapa</label><span>${s.project_stage}</span></div>` : ''}
-              ${s.delivery_date ? `<div class="sub-field"><label>Entrega Estimada</label><span>${s.delivery_date}</span></div>` : ''}
+              ${s.construction_company ? `<div class="sub-field"><label>Constructora</label><span>${escapeHtml(s.construction_company)}</span></div>` : ''}
+              ${s.units_total ? `<div class="sub-field"><label>Unidades Totales</label><span>${escapeHtml(String(s.units_total))}</span></div>` : ''}
+              ${s.units_available ? `<div class="sub-field"><label>Disponibles</label><span style="font-weight:700;color:var(--success);">${escapeHtml(String(s.units_available))}</span></div>` : ''}
+              ${s.project_stage ? `<div class="sub-field"><label>Etapa</label><span>${escapeHtml(s.project_stage)}</span></div>` : ''}
+              ${s.delivery_date ? `<div class="sub-field"><label>Entrega Estimada</label><span>${escapeHtml(s.delivery_date)}</span></div>` : ''}
             </div>` : ''}
           ${(() => {
             const imgs = Array.isArray(s.images) ? s.images : [];
@@ -2383,9 +2395,12 @@
                 ${imgs.map(img => {
                   const url = typeof img === 'string' ? img : (img.url || img.path || '');
                   const label = typeof img === 'object' ? (img.label || '') : '';
+                  // Reject obviously malicious URLs (javascript:, data:text/html, etc.)
+                  // — only allow http/https and relative /uploads paths.
+                  const safeUrl = /^(https?:\/\/|\/)/i.test(url) ? url : '';
                   return `<div style="position:relative;width:120px;height:80px;border-radius:6px;overflow:hidden;border:1px solid #d0dcea;flex-shrink:0;">
-                    <img src="${url}" alt="${label}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:.65rem;color:#8aaac8>Error</div>'">
-                    ${label ? `<div style="position:absolute;bottom:0;left:0;right:0;padding:2px 4px;background:rgba(0,0,0,0.6);color:#fff;font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>` : ''}
+                    <img src="${escapeHtml(safeUrl)}" alt="${escapeHtml(label)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:.65rem;color:#8aaac8>Error</div>'">
+                    ${label ? `<div style="position:absolute;bottom:0;left:0;right:0;padding:2px 4px;background:rgba(0,0,0,0.6);color:#fff;font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(label)}</div>` : ''}
                   </div>`;
                 }).join('')}
               </div>
@@ -2399,14 +2414,15 @@
               <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
                 ${bps.map(bp => {
                   const url = typeof bp === 'string' ? bp : (bp.url || bp.path || '');
-                  return `<a href="${url}" target="_blank" style="display:block;width:100px;height:70px;border-radius:6px;overflow:hidden;border:1px solid #d0dcea;flex-shrink:0;">
-                    <img src="${url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:.65rem;color:#8aaac8>PDF</div>'">
+                  const safeUrl = /^(https?:\/\/|\/)/i.test(url) ? url : '';
+                  return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" style="display:block;width:100px;height:70px;border-radius:6px;overflow:hidden;border:1px solid #d0dcea;flex-shrink:0;">
+                    <img src="${escapeHtml(safeUrl)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:.65rem;color:#8aaac8>PDF</div>'">
                   </a>`;
                 }).join('')}
               </div>
             </div>`;
           })()}
-          ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
+          ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${escapeHtml(s.description).replace(/\n/g,'<br>')}</div>` : ''}
           ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
           ${(() => {
             const units = Array.isArray(s.unit_types) ? s.unit_types : [];
@@ -2416,10 +2432,12 @@
               <table class="unit-types-table">
                 <thead><tr><th>Tipo</th><th>Hab.</th><th>Baños</th><th>m²</th><th>Precio</th><th>Disponibles</th></tr></thead>
                 <tbody>${units.map(u => `<tr>
-                  <td>${u.name||'—'}</td><td>${u.bedrooms||'—'}</td><td>${u.bathrooms||'—'}</td>
-                  <td>${u.area?u.area+' m²':'—'}</td>
+                  <td>${escapeHtml(u.name || '—')}</td>
+                  <td>${escapeHtml(String(u.bedrooms || '—'))}</td>
+                  <td>${escapeHtml(String(u.bathrooms || '—'))}</td>
+                  <td>${u.area ? escapeHtml(String(u.area)) + ' m²' : '—'}</td>
                   <td class="price-col">${u.price?'$'+Number(u.price).toLocaleString():'—'}</td>
-                  <td class="avail-col">${u.available||'0'}</td>
+                  <td class="avail-col">${escapeHtml(String(u.available || '0'))}</td>
                 </tr>`).join('')}</tbody>
               </table>
             </div>`;
@@ -2430,31 +2448,31 @@
           ${renderAIReview(s)}
           <div class="sub-card-footer">
             <div class="contact-info">
-              <strong>${s.name}</strong>
-              ${s.email} &nbsp;·&nbsp; ${s.phone} &nbsp;·&nbsp; ${s.role || ''}
+              <strong>${escapeHtml(s.name)}</strong>
+              ${escapeHtml(s.email)} &nbsp;·&nbsp; ${escapeHtml(s.phone)} &nbsp;·&nbsp; ${escapeHtml(s.role || '')}
             </div>
             <div class="card-actions">
               <button class="btn-approve ${isApprovable ? '' : 'btn-disabled'}"
                       ${isApprovable ? '' : 'disabled'}
                       title="${isEditsRequested ? 'Esperando que el agente reenvíe la propiedad con las correcciones solicitadas' : ''}"
-                      onclick="approve('${s.id}')">
+                      onclick="approve('${encodeURIComponent(s.id)}')">
                 <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                 Aprobar
               </button>
               <button class="btn-edits ${isActionable ? '' : 'btn-disabled'}"
                       ${isActionable ? '' : 'disabled'}
-                      onclick="requestEdits('${s.id}')">
+                      onclick="requestEdits('${encodeURIComponent(s.id)}')">
                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                 ${isEditsRequested ? 'Actualizar Nota' : 'Solicitar Ediciones'}
               </button>
               <button class="btn-reject ${isActionable ? '' : 'btn-disabled'}"
                       ${isActionable ? '' : 'disabled'}
-                      onclick="reject('${s.id}')">
+                      onclick="reject('${encodeURIComponent(s.id)}')">
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 Rechazar
               </button>
               ${s.status === 'approved' ? `
-              <button class="btn-edits" onclick="requestUpdate('${s.id}')" title="Solicitar que el agente actualice fotos, fechas u otra información">
+              <button class="btn-edits" onclick="requestUpdate('${encodeURIComponent(s.id)}')" title="Solicitar que el agente actualice fotos, fechas u otra información">
                 <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                 Solicitar Actualización
               </button>` : ''}
@@ -5039,14 +5057,14 @@
       const respTime = a.avg_response_ms ? (a.avg_response_ms / 60000).toFixed(1) + ' min' : '—';
       const scoreColor = a.total_score >= 50 ? 'var(--success)' : a.total_score >= 10 ? 'var(--accent)' : '#8A94A6';
       return `<tr>
-        <td><strong>${a.name}</strong>${medal}<br><span style="font-size:0.72rem;color:#8A94A6;">${a.email}</span></td>
-        <td>${a.agency || '<span style="color:#8A94A6;">—</span>'}</td>
-        <td><span style="font-size:1.3rem;font-weight:900;color:${scoreColor};">${a.total_score}</span></td>
-        <td style="text-align:center;">${a.creator_count}</td>
-        <td style="text-align:center;">${a.affiliate_count}</td>
-        <td style="text-align:center;">${a.claims}</td>
-        <td>${respTime}</td>
-        <td style="text-align:center;">${a.listings_count}</td>
+        <td><strong>${escapeHtml(a.name)}</strong>${medal}<br><span style="font-size:0.72rem;color:#8A94A6;">${escapeHtml(a.email || '')}</span></td>
+        <td>${a.agency ? escapeHtml(a.agency) : '<span style="color:#8A94A6;">—</span>'}</td>
+        <td><span style="font-size:1.3rem;font-weight:900;color:${scoreColor};">${escapeHtml(String(a.total_score))}</span></td>
+        <td style="text-align:center;">${escapeHtml(String(a.creator_count))}</td>
+        <td style="text-align:center;">${escapeHtml(String(a.affiliate_count))}</td>
+        <td style="text-align:center;">${escapeHtml(String(a.claims))}</td>
+        <td>${escapeHtml(respTime)}</td>
+        <td style="text-align:center;">${escapeHtml(String(a.listings_count))}</td>
       </tr>`;
     }).join('');
   }
@@ -5065,10 +5083,10 @@
         const breakdown = Object.entries(a.breakdown || {}).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(', ');
         const respTime = a.avg_response_ms ? (a.avg_response_ms / 60000).toFixed(1) + ' min' : '—';
         return `<tr>
-          <td>${a.name} ${roleBadge}</td>
-          <td style="font-weight:800;color:var(--accent);">${a.score}</td>
-          <td style="font-size:0.75rem;color:#8A94A6;">${breakdown || '—'}</td>
-          <td>${respTime}</td>
+          <td>${escapeHtml(a.name)} ${roleBadge}</td>
+          <td style="font-weight:800;color:var(--accent);">${escapeHtml(String(a.score))}</td>
+          <td style="font-size:0.75rem;color:#8A94A6;">${breakdown ? escapeHtml(breakdown) : '—'}</td>
+          <td>${escapeHtml(respTime)}</td>
           <td style="text-align:center;">${a.response_count}</td>
         </tr>`;
       }).join('');

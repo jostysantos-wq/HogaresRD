@@ -148,6 +148,18 @@ function hashIP(ip) {
   return 'v2:' + h;
 }
 
+// Hash an email for security logs so leaked logs don't enumerate
+// which emails attackers tried (audit fix L-6). Returns a short
+// fingerprint, not a reversible value.
+function hashEmail(email) {
+  if (!email) return null;
+  return crypto
+    .createHash('sha256')
+    .update(String(email).toLowerCase().trim() + JWT_SECRET)
+    .digest('hex')
+    .slice(0, 16);
+}
+
 // Compare a stored hash (could be legacy 16-char or v2:32-char) against an IP.
 // Recomputes BOTH formats and checks either match — so existing knownIPs
 // arrays keep working until they're rewritten.
@@ -294,6 +306,17 @@ function userAuth(req, res, next) {
   const queryToken = req.method === 'GET' ? (req.query?.token || '').trim() : '';
   const token = cookieToken || headerToken || queryToken;
   if (!token) return res.status(401).json({ error: 'No autenticado' });
+  // Audit fix M-4: when a session JWT lives in the URL it can leak via
+  // Referer headers, intermediate proxies, browser history, and access
+  // logs. Lock the response down so the token doesn't propagate from
+  // here: no-store kills caches, no-referrer cancels Referer, and the
+  // SOC log entry gives us visibility on which endpoints actually need
+  // this fallback so we can trim them in a follow-up sprint.
+  if (queryToken && !cookieToken && !headerToken) {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    try { logSec('query_token_used', req, { path: req.path }); } catch {}
+  }
   try {
     const payload = verifyJWT(token);
 
@@ -830,18 +853,20 @@ router.post('/login', authLimiter, async (req, res, next) => {
 
     const user = store.getUserByEmail(email);
     if (!user) {
-      logSec('login_failed', req, { email, reason: 'unknown_email' });
+      // Audit fix L-6: log a hash, not the plaintext email, so leaked
+      // logs don't enumerate which emails attackers tried.
+      logSec('login_failed', req, { emailHash: hashEmail(email), reason: 'unknown_email' });
       return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
     }
 
-    // Account lockout check (Sprint 4)
+    // Account lockout check (Sprint 4 + audit fix L-7).
+    // We DO NOT reveal that the account is locked because it would
+    // confirm the email exists to an attacker. Instead, return the
+    // same generic 401 as the "wrong password" path. The security
+    // log still records the locked-state attempt for SOC review.
     if (user.loginLockedUntil && new Date(user.loginLockedUntil) > new Date()) {
-      const remainingMs  = new Date(user.loginLockedUntil) - Date.now();
-      const remainingMin = Math.ceil(remainingMs / 60000);
       logSec('login_blocked', req, { userId: user.id, reason: 'account_locked' });
-      return res.status(429).json({
-        error: `Cuenta bloqueada por demasiados intentos fallidos. Intenta nuevamente en ${remainingMin} minuto${remainingMin !== 1 ? 's' : ''}.`
-      });
+      return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);

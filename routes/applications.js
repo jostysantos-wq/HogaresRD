@@ -34,6 +34,17 @@ const router    = express.Router();
 // Admin access to the applications API uses JWT role='admin' instead.
 const BASE_URL  = process.env.BASE_URL || 'http://localhost:3000';
 
+// Per-IP read limiter for the public track-token endpoint (audit fix
+// L-5). Protects against an attacker enumerating tokens or hammering
+// the application read path. 60 requests / minute is enough for a
+// real user reloading the tracker page.
+const _trackReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max:      60,
+  standardHeaders: true,
+  legacyHeaders:   false,
+});
+
 // ── Rate limiter for anonymous application creation (Item 11) ────────────
 // 5 new applications per IP per hour — stops spam/flooding without
 // impacting legitimate use (real clients submit once per listing).
@@ -764,7 +775,7 @@ router.get('/badge-count', userAuth, (req, res) => {
 // tradeoff is that the route lives outside the "append at end"
 // region used by other audit items — no sibling worktree touches
 // this header range so the merge stays clean.
-router.get('/track-token', (req, res) => {
+router.get('/track-token', _trackReadLimiter, (req, res) => {
   const token = String(req.query.token || '');
   if (!token) return res.status(400).json({ error: 'Token requerido.' });
 
