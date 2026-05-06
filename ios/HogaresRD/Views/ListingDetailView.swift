@@ -98,6 +98,8 @@ struct ListingDetailView: View {
     @State private var showTourBooking  = false
     @State private var showReport       = false
     @State private var showAffiliationRequest = false
+    @State private var showCompareSheet  = false   // Phase F — ComparisonView
+    @StateObject private var compareManager = CompareManager.shared
     @State private var affiliationMessage = ""
     @State private var affiliationSubmitting = false
     @State private var affiliationResult: String?
@@ -177,6 +179,11 @@ struct ListingDetailView: View {
                 ReportView(reportType: .listing, targetId: l.id, targetName: l.title)
                     .environmentObject(APIService.shared)
             }
+        }
+        .sheet(isPresented: $showCompareSheet) {
+            // Phase F — opens the side-by-side comparison from the
+            // listing detail's kebab when 2+ listings are queued.
+            ComparisonView(selectedIds: $compareManager.selectedIds)
         }
         .sheet(isPresented: $showAffiliationRequest) {
             NavigationStack {
@@ -510,10 +517,34 @@ struct ListingDetailView: View {
 
                 glassButton(systemImage: "square.and.arrow.up") { shareListing(l) }
 
-                // Top-right menu — Reportar always; "Solicitar afiliación"
-                // when the current user is a pro who is NOT already on the
-                // listing's agencies[] (server enforces the same predicate).
+                // Top-right menu — Comparar (Phase F) + Reportar always;
+                // "Solicitar afiliación" when the current user is a pro
+                // who is NOT already on the listing's agencies[] (server
+                // enforces the same predicate).
                 Menu {
+                    Button {
+                        _ = compareManager.toggle(l.id)
+                    } label: {
+                        Label(
+                            compareManager.isSelected(l.id)
+                                ? "Quitar de comparación"
+                                : "Añadir a comparación",
+                            systemImage: compareManager.isSelected(l.id)
+                                ? "checkmark.square.fill"
+                                : "square.split.2x1"
+                        )
+                    }
+                    // Surface a "Ver comparación (N)" entry whenever
+                    // 2+ listings are queued — saves the user a hop to
+                    // the Explorar tab to launch the comparison.
+                    if compareManager.selectedIds.count >= 2 {
+                        Button {
+                            showCompareSheet = true
+                        } label: {
+                            Label("Ver comparación (\(compareManager.selectedIds.count))",
+                                  systemImage: "square.split.2x1.fill")
+                        }
+                    }
                     if shouldShowAffiliationRequest(l) {
                         Button {
                             affiliationMessage = ""
