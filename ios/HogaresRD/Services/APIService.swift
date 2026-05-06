@@ -193,6 +193,17 @@ class APIService: ObservableObject {
         return result
     }
 
+    /// Property-level reviews aggregated from completed tour
+    /// feedback. Public endpoint — works for guests too. Returns
+    /// `{ reviews, average, count }`; the average is rounded to one
+    /// decimal so the iOS card can render "★ 4.5".
+    func getListingReviews(id: String) async throws -> ListingReviewsResponse {
+        let url = apiURL("/api/listings/\(id)/reviews")
+        let (data, resp) = try await session.data(from: url)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar las reseñas")
+        return try decoder.decode(ListingReviewsResponse.self, from: data)
+    }
+
     // MARK: - Ads
 
     func fetchActiveAds() async -> [Ad] {
@@ -4110,4 +4121,25 @@ struct AgencyReview: Decodable, Identifiable {
     let approved_at: String?
     let rejected_at: String?
     let rejected_reason: String?
+}
+
+
+// MARK: - Property-level reviews
+//
+// Phase G — aggregates per-tour feedback (rating + comment) into a
+// listing-level review feed. Source of truth lives on `tours.feedback_*`
+// fields; the iOS surface just renders the GET payload.
+
+struct ListingReview: Decodable, Identifiable {
+    let id: String
+    let rating: Int
+    let comment: String
+    let feedback_at: String?
+    let reviewer_name: String?
+}
+
+struct ListingReviewsResponse: Decodable {
+    let reviews: [ListingReview]
+    let average: Double?
+    let count: Int
 }

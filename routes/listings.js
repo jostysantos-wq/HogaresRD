@@ -960,4 +960,46 @@ router.post('/:id/feed-image', userAuth, async (req, res) => {
   }
 });
 
+// GET /api/listings/:id/reviews — property-level reviews
+//
+// Aggregates tour-feedback ratings (rating + comment) for the
+// given listing. Mirrors Airbnb / Zillow's pattern of surfacing
+// post-visit feedback as a property review. We don't ship a
+// separate review table — every "review" is a tour with feedback,
+// so the source of truth stays consistent with what the broker
+// already sees in their tour history.
+//
+// Public endpoint (no auth) so guests can see ratings while
+// browsing. Reviewer's full name is reduced to first name only
+// to balance social proof with client privacy.
+router.get('/:id/reviews', (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing || listing.status !== 'approved') {
+    return res.status(404).json({ error: 'Propiedad no encontrada' });
+  }
+  const tours = store.getToursByListing(req.params.id);
+  const withFeedback = tours.filter(t => t.feedback_rating && t.feedback_at);
+
+  // Sort newest first; surface up to 50 entries.
+  withFeedback.sort((a, b) => (b.feedback_at || '').localeCompare(a.feedback_at || ''));
+  const reviews = withFeedback.slice(0, 50).map(t => ({
+    id:           t.id,
+    rating:       t.feedback_rating,
+    comment:      (t.feedback_comment || '').trim(),
+    feedback_at:  t.feedback_at,
+    reviewer_name: ((t.client_name || 'Visitante').split(' ')[0] || 'Visitante'),
+  }));
+
+  const sum = withFeedback.reduce((s, t) => s + (t.feedback_rating || 0), 0);
+  const average = withFeedback.length
+    ? Math.round((sum / withFeedback.length) * 10) / 10
+    : null;
+
+  res.json({
+    reviews,
+    average,
+    count: withFeedback.length,
+  });
+});
+
 module.exports = router;

@@ -100,6 +100,10 @@ struct ListingDetailView: View {
     @State private var showAffiliationRequest = false
     @State private var showCompareSheet  = false   // Phase F — ComparisonView
     @StateObject private var compareManager = CompareManager.shared
+    // Phase G — property-level reviews aggregated from tour feedback
+    @State private var reviews: [ListingReview] = []
+    @State private var reviewsAverage: Double? = nil
+    @State private var reviewsCount: Int = 0
     @State private var affiliationMessage = ""
     @State private var affiliationSubmitting = false
     @State private var affiliationResult: String?
@@ -318,6 +322,14 @@ struct ListingDetailView: View {
                         // ── Construction Company ───────────────────
                         if let builder = l.construction_company {
                             builderSection(builder)
+                        }
+
+                        // ── Reseñas (Phase G) ──────────────────────
+                        // Aggregated tour-feedback ratings + comments.
+                        // Hidden until at least one tour has feedback;
+                        // empty state would just be visual noise.
+                        if reviewsCount > 0 {
+                            reviewsSection
                         }
 
                         // ── Map ────────────────────────────────────
@@ -1696,6 +1708,96 @@ struct ListingDetailView: View {
         loading = true
         listing = try? await APIService.shared.getListing(id: id)
         loading = false
+        // Phase G — best-effort review fetch. Public endpoint, so it
+        // works for guests too. Silent on failure (no reviews block
+        // renders; the listing detail still works).
+        if let response = try? await APIService.shared.getListingReviews(id: id) {
+            await MainActor.run {
+                reviews = response.reviews
+                reviewsAverage = response.average
+                reviewsCount = response.count
+            }
+        }
+    }
+
+    // MARK: - Reseñas section
+
+    @ViewBuilder
+    private var reviewsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Reseñas")
+                    .font(.system(size: 17, weight: .bold))
+                    .kerning(-0.2)
+                Spacer()
+                if let avg = reviewsAverage {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.rdGold)
+                        Text(String(format: "%.1f", avg))
+                            .font(.subheadline.weight(.semibold))
+                        Text("· \(reviewsCount)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(reviews.prefix(5).enumerated()), id: \.element.id) { idx, r in
+                    reviewRow(r)
+                    if idx < min(reviews.count, 5) - 1 {
+                        Divider().padding(.leading, 14)
+                    }
+                }
+            }
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        }
+    }
+
+    private func reviewRow(_ r: ListingReview) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                HStack(spacing: 1) {
+                    ForEach(0..<5, id: \.self) { i in
+                        Image(systemName: i < r.rating ? "star.fill" : "star")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.rdGold)
+                    }
+                }
+                Text(r.reviewer_name ?? "Visitante")
+                    .font(.caption.bold())
+                Spacer()
+                if let when = r.feedback_at, let pretty = formatRelativeDate(when) {
+                    Text(pretty)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            if !r.comment.isEmpty {
+                Text(r.comment)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func formatRelativeDate(_ iso: String) -> String? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var d = f.date(from: iso)
+        if d == nil { f.formatOptions = [.withInternetDateTime]; d = f.date(from: iso) }
+        guard let date = d else { return nil }
+        let days = Int(Date().timeIntervalSince(date) / 86400)
+        if days <= 0 { return "Hoy" }
+        if days == 1 { return "Ayer" }
+        if days < 30 { return "Hace \(days) días" }
+        let months = days / 30
+        return "Hace \(months) \(months == 1 ? "mes" : "meses")"
     }
 
     private func shareListing(_ l: Listing) {
