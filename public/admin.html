@@ -2827,21 +2827,24 @@
       const date = new Date(l.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
       const agStr = (l.agencies || []).map(a => a.name || a).join(', ') || '—';
       const intentMap = { comprar: 'Comprar', alquilar: 'Alquilar', invertir: 'Invertir' };
+      // Round-2 audit: every user-controlled field below escaped via esc().
+      // Lead POST is public (anonymous form submissions), so unsanitized
+      // input flows through this renderer if we don't escape here.
       const agentCell = l.agent_name
-        ? `<div style="font-weight:600;font-size:0.82rem;">${l.agent_name}</div><div style="font-size:0.7rem;color:#7a93b0;">${l.agent_email || ''}</div>`
-        : `<div id="lead-assign-${l.id}"><div style="color:#b45309;font-size:0.78rem;font-weight:600;">Sin asignar</div><button onclick="assignLeadAgent('${l.id}')" style="margin-top:0.3rem;font-size:0.7rem;font-weight:700;padding:0.25rem 0.6rem;border:1.5px solid var(--accent);border-radius:6px;background:none;color:var(--accent);cursor:pointer;">Asignar</button></div>`;
+        ? `<div style="font-weight:600;font-size:0.82rem;">${esc(l.agent_name)}</div><div style="font-size:0.7rem;color:#7a93b0;">${esc(l.agent_email || '')}</div>`
+        : `<div id="lead-assign-${esc(l.id)}"><div style="color:#b45309;font-size:0.78rem;font-weight:600;">Sin asignar</div><button onclick="assignLeadAgent('${encodeURIComponent(l.id)}')" style="margin-top:0.3rem;font-size:0.7rem;font-weight:700;padding:0.25rem 0.6rem;border:1.5px solid var(--accent);border-radius:6px;background:none;color:var(--accent);cursor:pointer;">Asignar</button></div>`;
       return `
-        <tr id="lead-row-${l.id}">
-          <td><div class="lead-name">${l.name}</div><div class="lead-contact">📞 ${l.phone}</div>${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}<div class="lead-contact" style="font-size:0.7rem;color:#7a93b0;">${contactMap[l.contact_method] || '—'}</div></td>
-          <td><div class="lead-listing">${l.listing_title || '—'}<small>${l.listing_price ? '$' + Number(l.listing_price).toLocaleString() : ''} · ${l.listing_type || ''}</small><small>${agStr}</small></div></td>
+        <tr id="lead-row-${esc(l.id)}">
+          <td><div class="lead-name">${esc(l.name)}</div><div class="lead-contact">📞 ${esc(l.phone)}</div>${l.email ? `<div class="lead-contact">✉️ ${esc(l.email)}</div>` : ''}<div class="lead-contact" style="font-size:0.7rem;color:#7a93b0;">${esc(contactMap[l.contact_method] || '—')}</div></td>
+          <td><div class="lead-listing">${esc(l.listing_title || '—')}<small>${l.listing_price ? '$' + Number(l.listing_price).toLocaleString() : ''} · ${esc(l.listing_type || '')}</small><small>${esc(agStr)}</small></div></td>
           <td>${agentCell}</td>
-          <td>${intentMap[l.intent] || l.intent || '—'}</td>
-          <td><div>${financingMap[l.financing] || l.financing || '—'}</div>${l.pre_approved ? '<div style="font-size:0.7rem;color:var(--success);font-weight:600;">✓ Pre-aprobado</div>' : ''}</td>
-          <td>${l.budget ? '$' + l.budget : '—'}</td>
-          <td>${l.timeline || '—'}</td>
-          <td><span class="lead-badge badge-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
-          <td style="white-space:nowrap;font-size:0.75rem;color:#7a93b0;">${date}</td>
-          <td><div class="lead-actions"><select class="lead-status-select" onchange="updateLeadStatus('${l.id}', this.value)">${['pendiente','en_proceso','comprado','no_comprado'].map(s => `<option value="${s}" ${l.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select></div></td>
+          <td>${esc(intentMap[l.intent] || l.intent || '—')}</td>
+          <td><div>${esc(financingMap[l.financing] || l.financing || '—')}</div>${l.pre_approved ? '<div style="font-size:0.7rem;color:var(--success);font-weight:600;">✓ Pre-aprobado</div>' : ''}</td>
+          <td>${l.budget ? '$' + esc(String(l.budget)) : '—'}</td>
+          <td>${esc(l.timeline || '—')}</td>
+          <td><span class="lead-badge badge-${esc(l.status)}">${esc(STATUS_LABELS[l.status] || l.status)}</span></td>
+          <td style="white-space:nowrap;font-size:0.75rem;color:#7a93b0;">${esc(date)}</td>
+          <td><div class="lead-actions"><select class="lead-status-select" onchange="updateLeadStatus('${encodeURIComponent(l.id)}', this.value)">${['pendiente','en_proceso','comprado','no_comprado'].map(s => `<option value="${s}" ${l.status===s?'selected':''}>${esc(STATUS_LABELS[s])}</option>`).join('')}</select></div></td>
         </tr>`;
     }).join('');
   }
@@ -3010,8 +3013,13 @@
     const typeLabels = { fullscreen: 'Fullscreen', banner: 'Banner', card: 'Card' };
     const placementLabels = { feed: 'Feed', sidebar: 'Sidebar', 'listing-page': 'Propiedad' };
     el.innerHTML = ads.map(ad => {
-      const imgHtml = ad.image_url
-        ? `<img class="ad-card-img" src="${ad.image_url}" alt="${esc(ad.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"><div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
+      // Round-2 audit: image_url goes into src= so we must reject
+      // javascript:/data: URLs and escape the rest. esc() handles HTML
+      // attribute context (kills " and >); the safeUrl gate kills the
+      // dangerous-scheme attack before we ever interpolate.
+      const safeImgUrl = (typeof ad.image_url === 'string' && /^(https?:\/\/|\/)/i.test(ad.image_url)) ? ad.image_url : '';
+      const imgHtml = safeImgUrl
+        ? `<img class="ad-card-img" src="${esc(safeImgUrl)}" alt="${esc(ad.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"><div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
         : `<div class="ad-card-img-placeholder">Sin imagen</div>`;
       const badge = ad.is_active ? `<span class="ad-badge-active">Activo</span>` : `<span class="ad-badge-inactive">Inactivo</span>`;
       const dateStr = [ad.start_date?.slice(0,10), ad.end_date?.slice(0,10)].filter(Boolean).join(' → ') || 'Sin fechas';
@@ -3851,30 +3859,34 @@
 
       const avatarColor = ['#0038A8','#0a7c4f','#4a2d9c','#c07c1a','#CF142B'][u.id.charCodeAt(0) % 5];
 
-      return `<tr id="urow-${u.id}">
+      // Round-2 audit fix: every user-controlled field escaped via esc().
+      // Self-registered users can put anything in `name` so this is the
+      // most exposed admin-XSS sink — anyone with /register access can
+      // try to compromise an admin session.
+      return `<tr id="urow-${esc(u.id)}">
         <td>
           <div class="user-name-cell">
-            <div class="user-avatar" style="background:${avatarColor};">${initials}</div>
+            <div class="user-avatar" style="background:${avatarColor};">${esc(initials)}</div>
             <div class="user-name-info">
-              <strong>${u.name || '(sin nombre)'}</strong>
-              <span>${u.email || '—'}</span>
+              <strong>${esc(u.name || '(sin nombre)')}</strong>
+              <span>${esc(u.email || '—')}</span>
             </div>
           </div>
         </td>
-        <td><span class="role-badge ${rClass}">${rLabel}</span></td>
-        <td style="font-size:0.8rem;color:#4d6a8a;">${joinDate}</td>
+        <td><span class="role-badge ${rClass}">${esc(rLabel)}</span></td>
+        <td style="font-size:0.8rem;color:#4d6a8a;">${esc(joinDate)}</td>
         <td>
           ${u.emailVerified
             ? '<span class="verified-chip yes"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Verificado</span>'
             : '<span class="verified-chip no">No verificado</span>'}
         </td>
-        <td style="${subStyle}">${subLabel}</td>
+        <td style="${subStyle}">${esc(subLabel)}</td>
         <td>${isLocked ? '<span class="locked-badge">🔒 Bloqueado</span>' : '<span style="color:#4d6a8a;font-size:0.78rem;">Activo</span>'}</td>
         <td style="display:flex;gap:6px;align-items:center;">
           ${isLocked
-            ? `<button class="btn-unlock" onclick="toggleLockUser('${u.id}', 'unlock')">Desbloquear</button>`
-            : `<button class="btn-lock"   onclick="toggleLockUser('${u.id}', 'lock')">Bloquear</button>`}
-          <button class="btn-lock" style="background:#CE1126;color:#fff;border-color:#CE1126;" onclick="deleteUser('${u.id}', '${(u.email||'').replace(/'/g, "\\'")}')">Eliminar</button>
+            ? `<button class="btn-unlock" onclick="toggleLockUser('${encodeURIComponent(u.id)}', 'unlock')">Desbloquear</button>`
+            : `<button class="btn-lock"   onclick="toggleLockUser('${encodeURIComponent(u.id)}', 'lock')">Bloquear</button>`}
+          <button class="btn-lock" style="background:#CE1126;color:#fff;border-color:#CE1126;" onclick="deleteUser('${encodeURIComponent(u.id)}', '${encodeURIComponent(u.email || '')}')">Eliminar</button>
         </td>
       </tr>`;
     }).join('');
@@ -3892,7 +3904,11 @@
       .catch(() => alert('Error de conexión'));
   }
 
-  function deleteUser(id, email) {
+  function deleteUser(id, encodedEmail) {
+    // The caller passes encodeURIComponent(email) so the value can't
+    // break out of the inline onclick string literal (round-2 audit).
+    let email = '';
+    try { email = decodeURIComponent(encodedEmail || ''); } catch { email = encodedEmail || ''; }
     if (!confirm(`¿Eliminar permanentemente al usuario "${email}"?\n\nEsto también eliminará sus búsquedas guardadas y tareas. Esta acción NO se puede deshacer.`)) return;
     if (!confirm(`CONFIRMAR: ¿Estás seguro de eliminar "${email}"?`)) return;
     fetch(`/admin/users/${id}`, { method: 'DELETE' })

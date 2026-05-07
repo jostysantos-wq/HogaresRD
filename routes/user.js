@@ -214,15 +214,22 @@ router.patch('/profile', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
+  // Round-2 audit fix: bio + jobTitle land in admin.html and broker
+  // dashboards. Strip < > + control chars before storage so a stored
+  // payload can't survive into any future renderer that forgets to
+  // escape on output. Phone is also stripped to drop any embedded
+  // control bytes attackers like to use for log injection.
+  const { sanitizeShortText, sanitizeLongText } = require('../utils/sanitize');
+
   const { phone, bio, jobTitle,
           profileVisible, showOnlineStatus, shareActivity, allowAnalytics,
           notif_newListings, notif_priceDrops, notif_similar, notif_agentMessages, notif_appUpdates
   } = req.body;
 
-  if (phone !== undefined) user.phone = (phone + '').trim();
-  if (bio !== undefined) user.bio = (bio + '').trim().slice(0, 300);
+  if (phone !== undefined) user.phone = sanitizeShortText(String(phone), 40);
+  if (bio !== undefined) user.bio = sanitizeLongText(String(bio), 300);
   if (jobTitle !== undefined && ['broker', 'agency'].includes(user.role)) {
-    user.jobTitle = (jobTitle + '').trim().slice(0, 60);
+    user.jobTitle = sanitizeShortText(String(jobTitle), 60);
   }
   // Privacy settings — synced across platforms
   if (profileVisible !== undefined)   user.profileVisible   = !!profileVisible;

@@ -27,6 +27,7 @@ const VALID_STATUSES = ['pendiente', 'en_proceso', 'comprado', 'no_comprado'];
 
 // ── POST /api/leads  (public — user submits lead) ────────────
 const rateLimit = require('express-rate-limit');
+const { sanitizeShortText, sanitizeLongText, sanitizeAgencies } = require('../utils/sanitize');
 const leadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: false, legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes. Intenta de nuevo en una hora.' } });
 router.post('/', leadLimiter, (req, res) => {
@@ -50,23 +51,27 @@ router.post('/', leadLimiter, (req, res) => {
     return res.status(202).json({ ok: true, duplicate: true, accepted: true });
   }
 
+  // Round-2 audit fix: every text field below originates from a public
+  // form (anyone can POST to /api/leads). Strip < > + control chars
+  // before storage so the admin renderer can never run a stored XSS,
+  // and clamp lengths so leads.json can't be inflated to MB-scale.
   const lead = {
     id:            crypto.randomUUID(),
-    listing_id:    listing_id    || '',
-    listing_title: listing_title || '',
-    listing_price: listing_price || '',
-    listing_type:  listing_type  || '',
-    agencies:      JSON.stringify(agencies || []),
-    name:          name.trim(),
-    phone:         phone.trim(),
-    email:         (email || '').trim(),
-    budget:        (budget || '').trim(),
-    timeline:      (timeline || '').trim(),
-    intent:        intent        || 'comprar',
-    financing:     financing     || '',
+    listing_id:    sanitizeShortText(listing_id, 50),
+    listing_title: sanitizeShortText(listing_title, 200),
+    listing_price: sanitizeShortText(String(listing_price || ''), 20),
+    listing_type:  sanitizeShortText(listing_type, 40),
+    agencies:      JSON.stringify(sanitizeAgencies(agencies)),
+    name:          sanitizeShortText(name, 120),
+    phone:         sanitizeShortText(phone, 40),
+    email:         sanitizeShortText(email, 120),
+    budget:        sanitizeShortText(String(budget || ''), 40),
+    timeline:      sanitizeShortText(timeline, 60),
+    intent:        sanitizeShortText(intent || 'comprar', 30),
+    financing:     sanitizeShortText(financing, 30),
     pre_approved:  pre_approved === true || pre_approved === 'true' ? 1 : 0,
-    contact_method: contact_method || 'whatsapp',
-    notes:         (notes || '').trim(),
+    contact_method: sanitizeShortText(contact_method || 'whatsapp', 30),
+    notes:         sanitizeLongText(notes, 2000),
     status:        'pendiente',
     ref_token:     bodyRefToken || req.cookies?.hrd_ref || null,
     referred_by:   null,

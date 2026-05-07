@@ -1205,50 +1205,15 @@ function generateListingId() {
   return id;
 }
 
-// SECURITY (round-1 audit fix H-1): /submit accepts unauthenticated
-// input; the admin queue renders it. Even with client-side escaping
-// in admin.html, defense in depth: strip angle brackets from short
-// text fields here so payloads never reach storage. Long-form fields
-// (description) keep their content but get clamped + the admin
-// renderer escapes them on output.
-function _sanitizeShortText(v, maxLen) {
-  if (typeof v !== 'string') return '';
-  // Strip ASCII control chars 0x00-0x1F, 0x7F, plus < and > (HTML
-  // delimiters). Then clamp length.
-  let out = '';
-  for (let i = 0; i < v.length; i++) {
-    const c = v.charCodeAt(i);
-    if (c < 0x20 || c === 0x7F) continue;
-    if (c === 0x3C || c === 0x3E) continue; // < >
-    out += v[i];
-    if (out.length >= maxLen) break;
-  }
-  return out;
-}
-function _sanitizeLongText(v, maxLen) {
-  if (typeof v !== 'string') return '';
-  // Allow LF (0x0A) and TAB (0x09) so descriptions can break lines.
-  // Strip everything else under 0x20 + DEL + angle brackets.
-  let out = '';
-  for (let i = 0; i < v.length; i++) {
-    const c = v.charCodeAt(i);
-    if (c < 0x20 && c !== 0x0A && c !== 0x09) continue;
-    if (c === 0x7F) continue;
-    if (c === 0x3C || c === 0x3E) continue;
-    out += v[i];
-    if (out.length >= maxLen) break;
-  }
-  return out;
-}
-function _sanitizeAgencies(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr.slice(0, 10).map(a => ({
-    name:  _sanitizeShortText(a && a.name,  120),
-    agent: _sanitizeShortText(a && a.agent, 120),
-    phone: _sanitizeShortText(a && a.phone,  40),
-    email: _sanitizeShortText(a && a.email, 120),
-  }));
-}
+// Audit fix H-1: shared sanitizers live in utils/sanitize.js so
+// listing edits, leads, profile updates, and any future ingest path
+// reuse the same rules. The renderer must still call escapeHtml() on
+// output — this module is the second wall, not the first.
+const {
+  sanitizeShortText: _sanitizeShortText,
+  sanitizeLongText:  _sanitizeLongText,
+  sanitizeAgencies:  _sanitizeAgencies,
+} = require('./utils/sanitize');
 
 app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
   const body = req.body;

@@ -3,6 +3,7 @@ const rateLimit    = require('express-rate-limit');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
 const { userAuth, optionalAuth } = require('./auth');
+const { sanitizeShortText, sanitizeLongText, sanitizeAgencies } = require('../utils/sanitize');
 const router       = express.Router();
 
 // Per-IP rate limit on read endpoints (audit fix L-5).
@@ -762,22 +763,50 @@ router.put('/:id', userAuth, (req, res) => {
   if (Array.isArray(incoming.images)) incoming.images = sanitizeMedia(incoming.images, 'images');
   if (Array.isArray(incoming.blueprints)) incoming.blueprints = sanitizeMedia(incoming.blueprints, 'blueprints');
 
+  // Round-2 audit fix: strip < > and control chars from text fields on
+  // edit too, not just on POST /submit. Without this an owner could
+  // patch their own listing's description with <img onerror=...> and
+  // it would land in storage, then render in /listing/:id (which uses
+  // raw HTML for rich descriptions).
+  const SHORT_FIELDS = [
+    'title', 'type', 'propertyType', 'condition',
+    'price', 'priceMax', 'currency', 'priceDOP',
+    'bedrooms', 'bathrooms', 'parking',
+    'area_const', 'area_land',
+    'floors', 'floor_num', 'yearBuilt',
+    'province', 'city', 'sector', 'address', 'referencePoint',
+    'lat', 'lng',
+    'construction_company', 'units_total', 'units_available',
+    'delivery_date', 'project_stage',
+    'name', 'email', 'phone', 'role', 'contact_pref',
+  ];
+  for (const f of SHORT_FIELDS) {
+    if (typeof incoming[f] === 'string') {
+      incoming[f] = sanitizeShortText(incoming[f], 200);
+    }
+  }
+  if (typeof incoming.title === 'string')   incoming.title   = sanitizeShortText(incoming.title, 200);
+  if (typeof incoming.address === 'string') incoming.address = sanitizeShortText(incoming.address, 300);
+  if (typeof incoming.description === 'string') {
+    incoming.description = sanitizeLongText(incoming.description, 6000);
+  }
+
   // Cap user-supplied list fields so an attacker can't persist megabytes of
   // JSON via amenities/tags/unit_types/agencies. Each list item is also
-  // truncated to a reasonable max length.
-  if (Array.isArray(incoming.amenities))  incoming.amenities  = capArray(incoming.amenities,  50, 100);
-  if (Array.isArray(incoming.tags))       incoming.tags       = capArray(incoming.tags,       20, 40);
+  // truncated to a reasonable max length and stripped of HTML delimiters.
+  if (Array.isArray(incoming.amenities)) {
+    incoming.amenities = incoming.amenities.slice(0, 50)
+      .map(a => typeof a === 'string' ? sanitizeShortText(a, 100) : a)
+      .filter(Boolean);
+  }
+  if (Array.isArray(incoming.tags)) {
+    incoming.tags = incoming.tags.slice(0, 20)
+      .map(t => typeof t === 'string' ? sanitizeShortText(t, 40) : t)
+      .filter(Boolean);
+  }
   if (Array.isArray(incoming.unit_types)) incoming.unit_types = capArray(incoming.unit_types, 30, 200);
   if (Array.isArray(incoming.agencies)) {
-    incoming.agencies = incoming.agencies.slice(0, 50).map(a => {
-      if (!a || typeof a !== 'object') return a;
-      const out = { ...a };
-      if (typeof out.name === 'string')    out.name    = out.name.slice(0, 200);
-      if (typeof out.contact === 'string') out.contact = out.contact.slice(0, 200);
-      if (typeof out.email === 'string')   out.email   = out.email.slice(0, 200);
-      if (typeof out.phone === 'string')   out.phone   = out.phone.slice(0, 200);
-      return out;
-    });
+    incoming.agencies = sanitizeAgencies(incoming.agencies.slice(0, 50));
   }
 
   // Extra safety: if the sanitized images array is EMPTY but the
